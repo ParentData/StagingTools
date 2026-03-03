@@ -25,7 +25,7 @@ from bs4 import BeautifulSoup, NavigableString
 # ── Inline styles ────────────────────────────────────────────────────────────
 
 STYLE_P_SUB = (
-    "margin: 0; font-family: 'Lora', Georgia, serif; font-weight: 400; "
+    "margin: 0; font-family: 'DM Sans', Arial, Helvetica, sans-serif; font-weight: 400; "
     "font-size: 18px; line-height: 32px; color: #000000;"
 )
 
@@ -876,7 +876,7 @@ def _update_toddler_banner(soup, fields):
     if not months:
         return
     # Ensure consistent margin on the <p>
-    banner_p['style'] = 'margin: 0; font-size: 18px; padding: 0 15px;'
+    banner_p['style'] = "margin: 0; font-size: 18px; font-family: 'DM Sans', Arial, Helvetica, sans-serif; padding: 0 15px;"
     banner_p.clear()
     new_html = (
         f'<span style="font-weight:bold;">Your child is {months} months old!</span> '

@@ -315,7 +315,7 @@ The reader's full question as plain text (no HTML tags). Usually at the beginnin
 </QUESTION_TEXT>
 
 <QUESTION_AUTHOR>
-The reader's sign-off name only — e.g. "Anne Marie". If no name is given, write: A reader
+The reader's sign-off name only — e.g. "Anne Marie". If the question is signed anonymously (e.g. "—Anonymous"), keep "Anonymous". If no name or sign-off is given at all, leave this field empty.
 </QUESTION_AUTHOR>
 
 <ANSWER_HTML>

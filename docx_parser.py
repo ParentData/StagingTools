@@ -462,7 +462,8 @@ def parse_toddler_digest_docx(file_path: str) -> dict:
       From Name: …                            (skipped)
       <intro paragraph(s)>
       <article URL>                            (bare URL or hyperlink)
-      <article description>
+      Title: <card title>                      (bold; "Title:" prefix optional)
+      Text: <card description>                 ("Text:" prefix optional)
       … (repeat for up to 3 articles)
       Win of the Month / Win of the Week       (bold heading)
       <quote text>
@@ -492,19 +493,17 @@ def parse_toddler_digest_docx(file_path: str) -> dict:
     win_attribution = ''
     in_win = False
     seen_first_url = False
-    last_was_url = False  # True if the previous paragraph was an article URL
+    last_article_needs = None  # 'title', 'description', or None
 
     for para in doc.paragraphs:
         text = para.text.strip()
         if not text:
-            last_was_url = False
             continue
 
         # "Subject line: …" → email title
         m = re.match(r'^Subject\s+line\s*:\s*(.+)$', text, re.I)
         if m:
             email_title = m.group(1).strip()
-            last_was_url = False
             continue
 
         # "Preheader: …" → extract months
@@ -513,18 +512,16 @@ def parse_toddler_digest_docx(file_path: str) -> dict:
             months_match = re.search(r'(\d+)\s*months?\s*old', m.group(1), re.I)
             if months_match:
                 months_old = months_match.group(1)
-            last_was_url = False
             continue
 
         # "From Name: …" → skip
         if re.match(r'^From\s+Name\s*:', text, re.I):
-            last_was_url = False
             continue
 
         # "Win of the Week/Month" heading (bold)
         if re.match(r'^Win\s+of\s+the\s+(Week|Month)\s*:?\s*$', text, re.I):
             in_win = True
-            last_was_url = False
+            last_article_needs = None
             continue
 
         # Inside Win section
@@ -534,7 +531,6 @@ def parse_toddler_digest_docx(file_path: str) -> dict:
                 win_attribution = re.sub(r'^[\u2014\u2013\-]\s*', '', text).strip()
             elif not win_text:
                 win_text = text
-            last_was_url = False
             continue
 
         # ParentData URL → new article (check text and hyperlinks)
@@ -549,21 +545,31 @@ def parse_toddler_digest_docx(file_path: str) -> dict:
 
         if url:
             seen_first_url = True
-            articles.append({'title': '', 'description': '', 'url': url})
-            last_was_url = True
+            # If the URL is embedded in a bold paragraph, the paragraph
+            # text IS the title.  Otherwise expect title on next line.
+            if _is_bold_para(para) and not url_match:
+                articles.append({'title': text, 'description': '', 'url': url})
+                last_article_needs = 'description'
+            else:
+                articles.append({'title': '', 'description': '', 'url': url})
+                last_article_needs = 'title'
             continue
 
-        # Description line right after a URL
-        if last_was_url and articles:
-            articles[-1]['description'] = text
-            last_was_url = False
+        # Fill in title or description for the most recent article
+        if last_article_needs and articles:
+            # Strip "Title:" or "Text:" labels if present
+            value = re.sub(r'^(Title|Text)\s*:\s*', '', text, flags=re.I)
+            if last_article_needs == 'title':
+                articles[-1]['title'] = value
+                last_article_needs = 'description'
+            elif last_article_needs == 'description':
+                articles[-1]['description'] = value
+                last_article_needs = None
             continue
 
         # Plain text before first article URL → intro
         if not seen_first_url:
             intro_lines.append(text)
-
-        last_was_url = False
 
     return {
         'title': email_title,
