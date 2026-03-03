@@ -537,6 +537,15 @@ def _inject_teaser_body(soup, fields):
         for el in visible_blocks:
             section4_td.append(el)
 
+        # Strip bottom margin from the last block so the section 4 td
+        # padding-bottom alone controls the gap before the faded section.
+        last_block = section4_td.find_all(True, recursive=False)
+        if last_block:
+            last = last_block[-1]
+            style = last.get('style', '')
+            if style:
+                last['style'] = re.sub(r'margin:\s*0\s+0\s+24px\s+0', 'margin: 0', style)
+
     # ── Section 6: single faded paragraph, medium → light ────────────────────
     # Only the indicated paragraph is shown — everything after it is discarded.
     # Both halves live inside ONE element so there is no paragraph gap.
@@ -1578,7 +1587,7 @@ def _split_fade_paragraph(el):
             split_pos = mid
 
     html_pos = _text_pos_to_html_pos(inner_html, split_pos)
-    return inner_html[:html_pos].rstrip(), inner_html[html_pos:].lstrip()
+    return inner_html[:html_pos], inner_html[html_pos:].lstrip()
 
 
 def _escape_attr(value: str) -> str:
