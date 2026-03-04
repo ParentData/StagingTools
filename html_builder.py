@@ -55,8 +55,7 @@ SHARED_MOBILE_CSS = (
     "body{width:100%!important;min-width:100%!important}\n"
     "table[class=email-container]{width:100%!important}\n"
     "img{max-width:100%!important;height:auto!important}\n"
-    ".news-top-link,.news-top-link span a{font-size:14px!important;padding:0 4px!important}\n"
-    ".news-top-link a span{font-size:14px!important}\n"
+    ".news-top-link,.news-top-link a,.news-top-link span,.news-top-link span a{font-size:14px!important;padding:0 4px!important;letter-spacing:0!important}\n"
     ".price-image{width:100%!important;max-width:300px!important;height:auto!important}\n"
     ".pricing-container{width:100%!important;max-width:100%!important}\n"
     ".pricing-row{display:block!important;width:100%!important}\n"
@@ -339,7 +338,7 @@ def _rebuild_article_card(card_tr, article: dict, is_last: bool = False):
 </tr>
 <tr>
 <td style="text-align: center;">
-<h3 class="h3-heading" style="margin: 0 0 8px 0; font-family: 'Lora', Georgia, serif; font-weight: bold; font-size: 18px; line-height: 24px; letter-spacing: -0.8px; color: #000000;"><a href="{url}" style="color: #000000; text-decoration: none;">{title}</a></h3>
+<h3 class="h3-heading" style="margin: 0 0 8px 0; font-family: 'Lora', Georgia, serif; font-weight: bold; font-size: 18px; line-height: 24px; color: #000000;"><a href="{url}" style="color: #000000; text-decoration: none;">{title}</a></h3>
 <p style="margin: 0; font-family: 'DM Sans', Arial, Helvetica, sans-serif; font-weight: 400; font-size: 16px; line-height: 24px; color: #000000;">{description}</p>
 </td>
 </tr>
@@ -616,13 +615,15 @@ def _handle_fertility_banner(soup, include_banner: bool):
         return
 
     # Update with new text, preserving the same <p> element and its styling
+    base = ("font-family: 'DM Sans', Arial, Helvetica, sans-serif; "
+            "font-size: 18px; letter-spacing: 0; -webkit-text-size-adjust: 100%;")
+    banner_p['style'] = f"margin: 0; color: #000000; {base} padding: 0 15px;"
     banner_p.clear()
     new_html = (
-        'Are you starting fertility treatment or no longer TTC? '
-        '<span style="text-decoration: underline; font-style: italic;">'
-        '<a href="https://parentdata.org/account/#newsletter-settings-section"'
-        ' style="color: #000000; font-size: 18px;">Update your newsletters.</a>'
-        '</span>'
+        f'<span style="color: #000000; {base}">Are you starting fertility treatment or no longer TTC? </span>'
+        f'<a href="https://parentdata.org/account/#newsletter-settings-section"'
+        f' style="color: #000000; {base} font-style: italic; text-decoration: underline;">'
+        f'Update&nbsp;your&nbsp;newsletters.</a>'
     )
     banner_p.append(BeautifulSoup(new_html, 'html.parser'))
 
@@ -769,12 +770,15 @@ def _update_pregnant_banner(soup, fields):
     weeks = fields.get('weeks_pregnant', '')
     if not weeks:
         return
+    base = ("font-family: 'DM Sans', Arial, Helvetica, sans-serif; "
+            "font-size: 18px; letter-spacing: 0; -webkit-text-size-adjust: 100%;")
+    banner_p['style'] = f"margin: 0; color: #000000; {base} padding: 0 15px;"
     banner_p.clear()
     new_html = (
-        f'<span style="font-weight:bold;">You are {weeks} weeks pregnant!</span> '
-        '<span style="text-decoration: underline; font-style: italic;">'
-        '<a href="https://parentdata.org/account/" style="color: #000000;" '
-        'title="Change Age">Change due date.</a></span>'
+        f'<span style="font-weight: bold; color: #000000; {base}">You are {weeks} weeks pregnant!</span> '
+        f'<a href="https://parentdata.org/account/" style="color: #000000; {base} '
+        f'font-style: italic; text-decoration: underline; font-weight: normal;" '
+        f'title="Change Age">Change&nbsp;due&nbsp;date.</a>'
     )
     banner_p.append(BeautifulSoup(new_html, 'html.parser'))
 
@@ -876,13 +880,15 @@ def _update_toddler_banner(soup, fields):
     if not months:
         return
     # Ensure consistent margin on the <p>
-    banner_p['style'] = "margin: 0; font-size: 18px; font-family: 'DM Sans', Arial, Helvetica, sans-serif; padding: 0 15px;"
+    base = ("font-family: 'DM Sans', Arial, Helvetica, sans-serif; "
+            "font-size: 18px; letter-spacing: 0; -webkit-text-size-adjust: 100%;")
+    banner_p['style'] = f"margin: 0; color: #000000; {base} padding: 0 15px;"
     banner_p.clear()
     new_html = (
-        f'<span style="font-weight:bold;">Your child is {months} months old!</span> '
-        '<span style="text-decoration: underline; font-style: italic;">'
-        '<a href="https://parentdata.org/account/" style="color: #000000;" '
-        'title="Change Age">Change age?</a></span>'
+        f'<span style="font-weight: bold; color: #000000; {base}">Your child is {months} months old!</span> '
+        f'<a href="https://parentdata.org/account/" style="color: #000000; {base} '
+        f'font-style: italic; text-decoration: underline; font-weight: normal;" '
+        f'title="Change Age">Change&nbsp;age?</a>'
     )
     banner_p.append(BeautifulSoup(new_html, 'html.parser'))
 
@@ -991,7 +997,7 @@ def _remove_unused_qa_pairs(soup, fields):
 
 def _update_win_of_week(soup, fields):
     """
-    Update the Win of the Week quote and attribution.
+    Update the Win of the Month quote and attribution.
 
     The quote lives in td.win-quote-cell (two <p> tags: quote + attribution).
     """
@@ -1101,7 +1107,14 @@ def _update_paid_digest_cards(soup, fields):
     for i, h2 in enumerate(section_headings):
         if i < len(sections):
             h2.clear()
-            h2.append(NavigableString(sections[i].get('name', '')))
+            name = sections[i].get('name', '')
+            # Sentence case: "Big Kids" → "Big kids"
+            if name:
+                words = name.split()
+                name = ' '.join(
+                    [words[0].capitalize()] + [w.lower() for w in words[1:]]
+                )
+            h2.append(NavigableString(name))
 
     # Flatten all articles across sections into a single ordered list
     all_articles = []
@@ -1203,7 +1216,7 @@ def _update_qa_pairs(soup, fields):
                 new_p = BeautifulSoup(
                     f'<p style="margin: 0; font-family: \'DM Sans\', Arial, Helvetica, sans-serif; '
                     f'font-weight: normal; font-size: 18px; line-height: 24px; '
-                    f'letter-spacing: -0.8px; color: #000000; font-style: italic;">'
+                    f'color: #000000; font-style: italic;">'
                     f'{content}</p>',
                     'html.parser',
                 )
@@ -1764,6 +1777,9 @@ def apply_email_fixes(html: str) -> str:
     # 8. Iterable height fix (regex on string)
     html = _fix_iterable_heights(html)
 
+    # 9. Strip letter-spacing: -0.8px from all inline styles
+    html = fix_letter_spacing(html)
+
     return html
 
 
@@ -1795,6 +1811,21 @@ def _apply_link_fixes(html: str) -> str:
         # Skip anchors without href
         if not re.search(r'\bhref\s*=', attrs, re.I):
             return m.group(0)
+
+        # Skip links inside .news-top-link — the banner link must stay
+        # span-free so the underline doesn't break on mobile wrapping.
+        preceding = html[:m.start()]
+        # Find last opening <p or <td with news-top-link vs last closing </p> or </td>
+        last_open = max(
+            preceding.rfind('news-top-link'),
+            -1
+        )
+        if last_open != -1:
+            last_close_p = preceding.rfind('</p>', last_open)
+            last_close_td = preceding.rfind('</td>', last_open)
+            if last_close_p == -1 and last_close_td == -1:
+                # Still inside the news-top-link element
+                return m.group(0)
 
         style_m = re.search(r'\bstyle\s*=\s*"([^"]*)"', attrs, re.I)
         cur_style = style_m.group(1) if style_m else ''
