@@ -379,6 +379,25 @@ def _update_copyright(soup):
             break
 
 
+# ── Latest Teaser default intro ──────────────────────────────────────────────
+
+_LATEST_TEASER_DEFAULT_INTRO = (
+    '<p style="padding-bottom: 24px; margin: 0; '
+    "font-family: 'DM Sans', Arial, Helvetica, sans-serif; "
+    'font-weight: 400; font-style: italic; font-size: 16px; line-height: 24px; color: #000000;">'
+    'Welcome to <strong>The Latest</strong>, where I break down current research and headlines '
+    'in pregnancy, parenting, and personal health. If you\u2019ve seen a recent headline '
+    '(parenting or otherwise) that you\u2019d like me to cover here, let me know by '
+    '<a href="https://parentdata.typeform.com/to/NHBsKJHv" style="color: #000000; text-decoration: underline;">'
+    'sharing your questions</a>.</p>\n'
+    '<p style="padding-bottom: 24px; margin: 0; '
+    "font-family: 'DM Sans', Arial, Helvetica, sans-serif; "
+    'font-weight: 400; font-style: italic; font-size: 16px; line-height: 24px; color: #000000;">'
+    'Did you know that ParentData offers customized weekly newsletters tailored to your exact '
+    'life stage \u2014 from trying to conceive through toddlerhood? That means the data and '
+    'guidance you\u2019re getting is always relevant to where you are right now.</p>'
+)
+
 # ── Latest Teaser template injection ─────────────────────────────────────────
 
 def _inject_latest_teaser(soup, fields):
@@ -513,26 +532,38 @@ def _inject_teaser_body(soup, fields):
     if section4_td:
         section4_td.clear()
 
-        # Italic intro — split on blank lines to support multiple paragraphs
-        intro_style = (
-            "padding-bottom: 24px; margin: 0; "
-            "font-family: 'DM Sans', Arial, Helvetica, sans-serif; "
-            "font-weight: 400; font-style: italic; font-size: 16px; line-height: 24px; color: #000000;"
-        )
-        intro_paras = [p.strip() for p in intro_text.split('\n\n') if p.strip()]
-        if not intro_paras and intro_text.strip():
-            intro_paras = [intro_text.strip()]
-        for para in intro_paras:
-            # Boldface "The Latest" wherever it appears in the intro
-            para = re.sub(
-                r'\bThe Latest\b',
-                r'<strong>The Latest</strong>',
-                para,
+        # If no intro_text provided, use the hardcoded default (raw HTML with link)
+        if not intro_text.strip():
+            for el in BeautifulSoup(_LATEST_TEASER_DEFAULT_INTRO, 'html.parser').find_all('p'):
+                section4_td.append(el)
+        else:
+            # Italic intro — split on blank lines to support multiple paragraphs
+            intro_style = (
+                "padding-bottom: 24px; margin: 0; "
+                "font-family: 'DM Sans', Arial, Helvetica, sans-serif; "
+                "font-weight: 400; font-style: italic; font-size: 16px; line-height: 24px; color: #000000;"
             )
-            new_p = BeautifulSoup(
-                f'<p style="{intro_style}">{para}</p>', 'html.parser'
-            ).p
-            section4_td.append(new_p)
+            intro_paras = [p.strip() for p in intro_text.split('\n\n') if p.strip()]
+            if not intro_paras and intro_text.strip():
+                intro_paras = [intro_text.strip()]
+            for para in intro_paras:
+                # Boldface "The Latest" wherever it appears in the intro
+                para = re.sub(
+                    r'\bThe Latest\b',
+                    r'<strong>The Latest</strong>',
+                    para,
+                )
+                # Link "sharing your questions" to the Typeform
+                para = para.replace(
+                    'sharing your questions',
+                    '<a href="https://parentdata.typeform.com/to/NHBsKJHv"'
+                    ' style="color: #000000; text-decoration: underline;">'
+                    'sharing your questions</a>',
+                )
+                new_p = BeautifulSoup(
+                    f'<p style="{intro_style}">{para}</p>', 'html.parser'
+                ).p
+                section4_td.append(new_p)
 
         # Horizontal rule separating intro from article body
         section4_td.append(BeautifulSoup(

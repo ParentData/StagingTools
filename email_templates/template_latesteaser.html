@@ -58,12 +58,19 @@ a[x-apple-data-detectors] {
 
 .fade-out-medium { opacity: .5; }
 .fade-out-light { opacity: .2; }
+.plan-col { border-radius: 4px !important; }
 
 /* Responsive styles: shared mobile CSS injected at build time by html_builder.py */
 /* Template-specific overrides only */
 @media only screen and (max-width: 480px) {
     .pricing-old p { font-size: 48px !important; }
     .pricing-new p { font-size: 48px !important; }
+    .plan-col { display:block!important; width:100%!important; max-width:100%!important; text-align:center!important; padding-left:0!important; padding-right:0!important; }
+    .plan-col-first { padding-bottom:28px!important; border-right:none!important; border-bottom:1px solid #d9d287!important; margin-bottom:20px!important; }
+    .plan-spacer { display:none!important; width:0!important; max-width:0!important; overflow:hidden!important; }
+    .plan-price { font-size:38px!important; line-height:42px!important; }
+    .plan-old { font-size:26px!important; line-height:30px!important; }
+    .v-section-pad { padding:20px 20px!important; }
 }
 </style>
     
@@ -233,48 +240,86 @@ a[x-apple-data-detectors] {
 </table>
 </td>
 </tr>
-<!-- UPGRADE SECTION: Cream Background -->
+<!-- UPGRADE SECTION: Choose Your Plan -->
 <tr>
-<td style="background-color: rgb(255, 252, 238); padding: 36px 24px;">
-<table border="0" cellpadding="0" cellspacing="0" role="presentation" width="100%"><!-- Unlock Headline -->
+<td class="table-box-mobile v-section-pad" style="background-color: #fffcee; padding: 36px 24px;">
+<table border="0" cellpadding="0" cellspacing="0" role="presentation" width="100%"><!-- Headline -->
 <tbody>
 <tr>
-<td style="text-align: center; padding-bottom: 16px;">
-<h2 class="upgrade-headline-mobile" style="margin: 0; font-family: 'Lora', Georgia, serif; font-weight: bold; font-size: 30px; line-height: 36px; letter-spacing: -1.5px; color: #000000;">Unlock this article. Upgrade today.</h2>
+<td style="text-align: center; padding-bottom: 24px;">
+<p style="margin: 0; font-family: 'Lora', Georgia, serif; font-weight: bold; font-size: 26px; line-height: 32px; letter-spacing: -0.5px; color: #000000;">Choose your plan</p>
 </td>
 </tr>
-<!-- Pricing Section -->
+<!-- Cards row -->
 <tr>
-<td style="text-align: center; padding-bottom: 12px;">
-<table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="width: 100%; max-width: 368px;">
+<td>
+<table border="0" cellpadding="0" cellspacing="0" role="presentation" width="100%">
 <tbody>
-<tr><!-- Promo Price with Brush Background -->
-<td style="vertical-align: middle; width: 100%;"><img alt="$69 per year discount" class="price-image fluid" src="https://library.iterable.com/3244/21559/9de573e61e4a4298b1c987a2251509ac-price.png" style="max-width: 100%; height: auto;" width="368"></td>
+<tr><!-- ANNUAL CARD -->
+<td class="plan-col plan-col-first" style="width: 48%; vertical-align: top;">
+<table border="0" cellpadding="0" cellspacing="0" role="presentation" style="background-color: #fceea9; border: 2px solid #000000; border-radius: 16px; box-shadow: 4px 4px 0px 0px rgba(0,0,0,1);" width="100%">
+<tbody>
+<tr>
+<td style="padding: 24px 18px; text-align: center;">
+<p style="margin: 0 0 6px; font-family: 'DM Sans', Arial, Helvetica, sans-serif; font-weight: 800; font-size: 11px; letter-spacing: 2px; color: #000000; text-transform: uppercase;">Annual</p>
+<p style="margin: 0 0 2px; font-family: 'Lora', Georgia, serif; font-weight: 400; font-size: 20px; line-height: 24px; color: #666666; text-decoration: line-through;">$120/yr</p>
+<div style="display: inline-block; background-image: url('https://library.iterable.com/3244/21559/2a80c68d3b4f4804b52b0c5d52274ee7-brush.png'); background-size: contain; background-repeat: no-repeat; background-position: center; padding: 16px 8px;">
+<p style="margin: 0; font-family: 'Lora', Georgia, serif; font-weight: bold; font-size: 38px; line-height: 42px; letter-spacing: -1.5px; color: #000000;">$99</p>
+</div>
+<p style="margin: 4px 0 12px; font-family: 'DM Sans', Arial, Helvetica, sans-serif; font-weight: 500; font-size: 12px; color: #333333;">per year&nbsp;</p>
+<table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin: 0 auto 18px;">
+<tbody>
+<tr>
+<td style="background-color: #000000; border-radius: 50px; padding: 5px 13px;">
+<p style="margin: 0; font-family: 'DM Sans', Arial, Helvetica, sans-serif; font-weight: bold; font-size: 10px; letter-spacing: 1px; color: #fceea9; text-transform: uppercase;">Save 20%</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div style="display: block; border-radius: 15px; background-color: #fceea9; border: 2px solid #000000; box-shadow: 0px 4px 4px 0px rgba(0,0,0,0.25);"><a href="https://parentdata.org/register/plus-yearly/?coupon=yearly99" rel="noopener" style="display: block; padding: 14px 12px; font-family: 'DM Sans', Arial, Helvetica, sans-serif; font-weight: 800; font-size: 15px; line-height: 18px; letter-spacing: 0.24px; color: #000000; text-decoration: none; text-transform: uppercase; text-align: center;" target="_blank">Get Annual</a></div>
+</td>
+</tr>
+</tbody>
+</table>
+</td>
+<!-- Card gap -->
+<td class="plan-spacer" style="width: 4%;"></td>
+<!-- MONTHLY CARD -->
+<td class="plan-col" style="width: 48%; vertical-align: top;">
+<table border="0" cellpadding="0" cellspacing="0" role="presentation" style="background-color: #ffffff; border: 2px solid #000000; border-radius: 16px; box-shadow: 4px 4px 0px 0px rgba(0,0,0,1);" width="100%">
+<tbody>
+<tr>
+<td style="padding: 24px 18px; text-align: center;">
+<p style="margin: 0 0 6px; font-family: 'DM Sans', Arial, Helvetica, sans-serif; font-weight: 800; font-size: 11px; letter-spacing: 2px; color: #000000; text-transform: uppercase;">Monthly</p>
+<p style="margin: 0 0 2px; font-family: 'Lora', Georgia, serif; font-weight: 400; font-size: 20px; line-height: 24px; color: #666666; text-decoration: line-through;">$12/mo</p>
+<div style="padding: 16px 8px;">
+<p style="margin: 0; font-family: 'Lora', Georgia, serif; font-weight: bold; font-size: 38px; line-height: 42px; letter-spacing: -1.5px; color: #000000;">$9</p>
+</div>
+<p style="margin: 4px 0 12px; font-family: 'DM Sans', Arial, Helvetica, sans-serif; font-weight: 500; font-size: 12px; color: #333333;">per month</p>
+<table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin: 0 auto 18px;">
+<tbody>
+<tr>
+<td style="background-color: #000000; border-radius: 50px; padding: 5px 13px;">
+<p style="margin: 0; font-family: 'DM Sans', Arial, Helvetica, sans-serif; font-weight: bold; font-size: 10px; letter-spacing: 1px; color: #ffffff; text-transform: uppercase;">Pay as you go</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div style="display: block; border-radius: 15px; background-color: #ffffff; border: 2px solid #000000; box-shadow: 0px 4px 4px 0px rgba(0,0,0,0.25);"><a href="https://parentdata.org/register/plus/?coupon=monthly3" rel="noopener" style="display: block; padding: 14px 12px; font-family: 'DM Sans', Arial, Helvetica, sans-serif; font-weight: 800; font-size: 15px; line-height: 18px; letter-spacing: 0.24px; color: #000000; text-decoration: none; text-transform: uppercase; text-align: center;" target="_blank">Go Monthly</a></div>
+</td>
 </tr>
 </tbody>
 </table>
 </td>
 </tr>
-<!-- Subscribe Button -->
-<tr>
-<td align="center" style="padding-bottom: 0px;">
-<table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="max-width: 288px; width: 100%;">
-<tbody>
-<tr>
-<td align="center" style="padding: 20px;">
-<div class="subscribe-btn-mobile" style="display: inline-block; mso-hide: all; width: auto; /* html/webmail styles */                border-radius: 15px; background-color: #fceea9; border: 2px solid #000000; box-shadow: 0px 4px 4px 0px rgba(0,0,0,0.25);"><a href="#" rel="noopener" style="display: block; /* link padding &amp; text styles */                                        padding: 20px 16px; font-family: 'DM Sans', Arial, Helvetica, sans-serif; font-weight: 800; font-size: 24px; line-height: 24px; color: #000000; text-decoration: none; text-transform: uppercase; text-align: center;" target="_blank"> SUBSCRIBE NOW </a></div>
-</td>
-</tr>
-<!-- <tr>
-<td align="center" style="border-radius: 15px; background-color: #fceea9; border: 2px solid #000000; box-shadow: 0px 4px 4px 0px rgba(0,0,0,0.25);"><a href="#" style="display: inline-block; padding: 21px 12px; width: 100%; font-family: 'DM Sans', Arial, Helvetica, sans-serif; font-weight: 800; font-size: 24px; line-height: 20px; color: #000000; text-decoration: none; text-transform: uppercase; text-align: center;"> SUBSCRIBE NOW </a></td>
-</tr> --></tbody>
+</tbody>
 </table>
 </td>
 </tr>
-<!-- Cancel Anytime Text -->
+<!-- Footnote -->
 <tr>
-<td style="text-align: center;">
-<p style="margin: 0; font-family: 'DM Sans', Arial, Helvetica, sans-serif; font-weight: 500; font-size: 16px; line-height: 20px; color: #000000;">cancel anytime</p>
+<td style="text-align: center; padding-top: 20px;">
+<p style="margin: 0; font-family: 'DM Sans', Arial, Helvetica, sans-serif; font-weight: 500; font-size: 15px; line-height: 20px; letter-spacing: -0.5px; color: #000000;">cancel anytime</p>
 </td>
 </tr>
 </tbody>
