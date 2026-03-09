@@ -1866,6 +1866,10 @@ def apply_email_fixes(html: str) -> str:
     #     Only targets <p> tags with an explicit inline style but no effective
     #     bottom spacing from margin shorthand, margin-bottom, or padding-bottom.
     for p in soup.find_all('p', style=True):
+        # Skip header-area elements (subtitle, author line, welcome banner)
+        p_classes = p.get('class', [])
+        if 'sub-text' in p_classes or 'welcome-message' in p_classes or 'news-top-link' in p_classes:
+            continue
         style = p.get('style', '')
         if re.search(r'\bpadding-bottom\s*:', style, re.I):
             continue
@@ -2091,7 +2095,11 @@ def _inject_shared_mobile_css(html: str) -> str:
 
     Shared rules come BEFORE any template-specific @media rules, so
     template overrides win (later rule with same specificity + !important).
+    Skips injection if the shared CSS is already present (idempotent).
     """
+    # Detect by a unique rule that only appears in the shared block
+    if '.price-image{width:100%' in html:
+        return html
     return re.sub(
         r'(<style[^>]*>)',
         r'\1\n' + SHARED_MOBILE_CSS,
@@ -2163,7 +2171,7 @@ def _inject_gmail_ios_css(html: str) -> str:
         "}\n"
         "u + #body p.sub-text.author-line{"
         "font-size:16px!important;"
-        "font-family:'Lora',Georgia,serif!important"
+        "font-family:'DM Sans',Arial,Helvetica,sans-serif!important"
         "}\n"
         "/* Gmail iOS: fix link sizes in welcome banner, headings + footer */\n"
         "u + #body .welcome-message a,"
@@ -2179,7 +2187,7 @@ def _inject_gmail_ios_css(html: str) -> str:
         "/* Mobile: lock author font for iOS Mail */\n"
         "@media only screen and (max-width:480px){\n"
         "p.author-line{"
-        "font-family:'Lora',Georgia,serif!important"
+        "font-family:'DM Sans',Arial,Helvetica,sans-serif!important"
         "}\n"
         "}\n"
     )
@@ -2191,7 +2199,9 @@ def _inject_gmail_ios_css(html: str) -> str:
         count=1,
         flags=re.IGNORECASE,
     )
-    # Append CSS inside the first <style> block
+    # Append CSS inside the first <style> block (skip if already present)
+    if 'u + #body .tablebox a' in html:
+        return html
     html = html.replace('</style>', gmail_css + '</style>', 1)
     return html
 
