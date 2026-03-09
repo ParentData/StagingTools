@@ -868,6 +868,7 @@ def _inject_pregnant_qa(soup, fields):
     """Inject all fields into the pregnancy Q&A template."""
     _update_pregnant_banner(soup, fields)
     _update_qa_intro(soup, fields)
+    _remove_unused_qa_pairs(soup, fields)
     _update_qa_pairs(soup, fields)
     _update_copyright(soup)
 
