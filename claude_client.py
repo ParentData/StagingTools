@@ -158,7 +158,7 @@ IMPORTANT:
 - All HTML in the JSON values must be valid and properly escaped as a JSON string.
 - Preserve special characters like em dashes (—), curly quotes, and non-breaking spaces correctly."""
 
-    return _call_claude(prompt)
+    return _call_claude(prompt, max_tokens=16000)
 
 
 def _extract_fields_fertility(raw_text: str, mammoth_html: str) -> dict:
@@ -209,7 +209,7 @@ IMPORTANT:
 - All HTML in the JSON values must be valid and properly escaped as a JSON string.
 - Preserve special characters like em dashes (—), curly quotes, and non-breaking spaces correctly."""
 
-    result = _call_claude(prompt)
+    result = _call_claude(prompt, max_tokens=16000)
     # Ensure welcome_html is always empty for fertility
     result['welcome_html'] = ''
     return result
