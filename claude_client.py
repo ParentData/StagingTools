@@ -239,6 +239,14 @@ def _strip_wp_bloat(html: str) -> str:
         r'<div[^>]*class="wp-block-buttons[^"]*"[^>]*>.*?</div>\s*</div>',
         '', html, flags=re.S
     )
+    # Remove WordPress Gutenberg block comments (<!-- wp:xxx --> / <!-- /wp:xxx -->)
+    html = re.sub(r'<!--\s*/?wp:[^>]*-->', '', html)
+    # Remove id="bottom-line" anchors from body elements — these are WP jump-link
+    # targets that can confuse Claude into thinking the "bottom line" section starts
+    # earlier than the actual heading (e.g. when the id is on a blockquote paragraph)
+    html = re.sub(r'\s+id="bottom-line"', '', html)
+    # Collapse runs of blank lines left behind
+    html = re.sub(r'\n{3,}', '\n\n', html)
     return html
 
 
@@ -453,17 +461,34 @@ IMPORTANT: Return ONLY the raw JSON object. No markdown fences, no explanation."
 
 
 def _call_claude(prompt: str, max_tokens: int = 8000) -> dict:
-    """Send a prompt to Claude and parse the JSON response."""
+    """Send a prompt to Claude and parse the JSON response.
+
+    If Claude's response is truncated (stop_reason == 'max_tokens'), we retry
+    once with a continuation prompt to get the rest of the JSON.
+    """
     response = client.messages.create(
         model=MODEL,
         max_tokens=max_tokens,
         messages=[{'role': 'user', 'content': prompt}],
     )
 
-    if response.stop_reason == 'max_tokens':
-        print(f'[claude_client] Warning: response truncated at {max_tokens} tokens — output may be incomplete')
-
     text = response.content[0].text.strip()
+
+    # If truncated, retry with a continuation to capture the remainder
+    if response.stop_reason == 'max_tokens':
+        print(f'[claude_client] Response truncated at {max_tokens} tokens — requesting continuation...')
+        continuation = client.messages.create(
+            model=MODEL,
+            max_tokens=max_tokens,
+            messages=[
+                {'role': 'user', 'content': prompt},
+                {'role': 'assistant', 'content': text},
+                {'role': 'user', 'content': 'Your JSON response was cut off. Continue EXACTLY from where you stopped — output only the remaining JSON text, no preamble. Start with the very next character after your last output.'},
+            ],
+        )
+        text = text + continuation.content[0].text.strip()
+        if continuation.stop_reason == 'max_tokens':
+            print('[claude_client] Warning: continuation also truncated — output may still be incomplete')
 
     # Strip potential markdown code fences
     if text.startswith('```'):

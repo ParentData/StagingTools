@@ -1843,17 +1843,46 @@ def apply_email_fixes(html: str) -> str:
     soup = BeautifulSoup(html, 'html.parser')
 
     # 1–3. Semantic tags → inline-styled spans
+    # Old iOS Mail doesn't inherit font-family through <span>, so we must set
+    # it explicitly. Walk up to the nearest parent with a font-family, or
+    # default to DM Sans.
+    import re as _re_fix
+
+    def _parent_font_family(tag):
+        """Find font-family from the nearest ancestor's inline style."""
+        for parent in tag.parents:
+            ps = parent.get('style', '') if hasattr(parent, 'get') else ''
+            m = _re_fix.search(r'font-family\s*:\s*([^;]+)', ps)
+            if m:
+                return m.group(1).strip()
+        return "'DM Sans',Arial,Helvetica,sans-serif"
+
+    def _parent_font_size(tag):
+        """Find font-size from the nearest ancestor's inline style."""
+        for parent in tag.parents:
+            ps = parent.get('style', '') if hasattr(parent, 'get') else ''
+            m = _re_fix.search(r'font-size\s*:\s*([^;]+)', ps)
+            if m:
+                return m.group(1).strip()
+        return '16px'
+
     for tag in soup.find_all(['strong', 'b']):
+        ff = _parent_font_family(tag)
+        fz = _parent_font_size(tag)
         tag.name = 'span'
-        tag['style'] = 'font-weight:bold;' + (tag.get('style') or '')
+        tag['style'] = f'font-weight:bold;font-family:{ff};font-size:{fz};' + (tag.get('style') or '')
 
     for tag in soup.find_all(['em', 'i']):
+        ff = _parent_font_family(tag)
+        fz = _parent_font_size(tag)
         tag.name = 'span'
-        tag['style'] = 'font-style:italic;' + (tag.get('style') or '')
+        tag['style'] = f'font-style:italic;font-family:{ff};font-size:{fz};' + (tag.get('style') or '')
 
     for tag in soup.find_all('u'):
+        ff = _parent_font_family(tag)
+        fz = _parent_font_size(tag)
         tag.name = 'span'
-        tag['style'] = 'text-decoration:underline;' + (tag.get('style') or '')
+        tag['style'] = f'text-decoration:underline;font-family:{ff};font-size:{fz};' + (tag.get('style') or '')
 
     # 4–5. <img> fixes
     for img in soup.find_all('img'):
