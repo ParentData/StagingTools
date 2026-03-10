@@ -1320,6 +1320,13 @@ def _update_marketing_banner(soup, fields):
     if not p:
         return
 
+    if fields.get('no_banner'):
+        # Remove the entire banner row
+        outer_tr = _outer_email_tr(p, soup)
+        if outer_tr:
+            outer_tr.decompose()
+        return
+
     if fields.get('sponsor') == 'lemonade':
         # Replace with Lemonade sponsor ad — three <p> tags inside the same <td>
         td = p.parent
@@ -1381,6 +1388,11 @@ def _update_marketing_intro(soup, fields):
             f'{_escape_attr(para2)}</a></p>'
         )
         intro_td.append(BeautifulSoup(p2_html, 'html.parser'))
+
+    # When the banner is hidden, add a separator line after the intro
+    if fields.get('no_banner'):
+        hr_html = '<hr style="border: none; border-top: 1px solid #e0e0e0; margin: 8px 0 24px 0;"/>'
+        intro_td.append(BeautifulSoup(hr_html, 'html.parser'))
 
 
 def _update_marketing_pricing(soup, fields):
@@ -2023,15 +2035,28 @@ def _apply_link_fixes(html: str) -> str:
             r'^\s*<span\b[^>]*\bstyle\s*=\s*"([^"]*)"', content, re.I
         )
         _span_style = _span_style_m.group(1) if _span_style_m else ''
-        already_fixed = bool(
-            _span_style
-            and re.search(r'\bcolor\s*:', _span_style, re.I)
-            and re.search(r'\bfont-size\s*:', _span_style, re.I)
-        )
+        _has_span_color = bool(_span_style and re.search(r'\bcolor\s*:', _span_style, re.I))
+        _has_span_fz    = bool(_span_style and re.search(r'\bfont-size\s*:', _span_style, re.I))
+        _has_span_ff    = bool(_span_style and re.search(r'\bfont-family\s*:', _span_style, re.I))
+        already_fixed = _has_span_color and _has_span_fz and _has_span_ff
 
         # Already complete — don't double-process
         if has_color and has_text_dec and already_fixed:
             return m.group(0)
+
+        # Partial fix: span has color+font-size but missing font-family.
+        # Patch font-family into the existing span instead of re-wrapping.
+        if _has_span_color and _has_span_fz and not _has_span_ff:
+            preceding_ff = re.findall(
+                r'font-family\s*:\s*([^;]+)', html[:m.start()], re.I
+            )
+            patch_ff = preceding_ff[-1].strip() if preceding_ff else "'DM Sans',Arial,Helvetica,sans-serif"
+            patched_content = re.sub(
+                r'(<span\b[^>]*\bstyle\s*=\s*")',
+                rf'\1font-family:{patch_ff};',
+                content, count=1, flags=re.I
+            )
+            return f'<a{attrs}>{patched_content}</a>'
 
         # Build the styles missing from the <a> tag (no font-size:inherit —
         # natural inheritance is more reliable on older iOS Mail)
@@ -2077,8 +2102,20 @@ def _apply_link_fixes(html: str) -> str:
             else:
                 span_fz = '16px'
 
+        # Determine font-family for the span — inherit from the <a> tag's
+        # own style or from step 10's propagation; fall back to DM Sans.
+        ff_m = re.search(r'font-family\s*:\s*([^;]+)', merged, re.I)
+        if ff_m:
+            span_ff = ff_m.group(1).strip()
+        else:
+            preceding_ff = re.findall(
+                r'font-family\s*:\s*([^;]+)', html[:m.start()], re.I
+            )
+            span_ff = preceding_ff[-1].strip() if preceding_ff else "'DM Sans',Arial,Helvetica,sans-serif"
+
         span_parts = [
             f"font-size:{span_fz}",
+            f"font-family:{span_ff}",
             f"color:{c_m.group(1).strip() if c_m else '#000000'}",
             f"text-decoration:{td_m.group(1).strip() if td_m else 'underline'}",
         ]

@@ -283,7 +283,7 @@ IMPORTANT:
 - Return ONLY the raw JSON object. No markdown code fences, no explanation, no extra text.
 - All HTML in the JSON values must be valid and properly escaped as a JSON string."""
 
-    result = _call_claude(prompt)
+    result = _call_claude(prompt, max_tokens=16000)
     result.setdefault('bottom_line_html', '')
     result.setdefault('welcome_html', '')
     result.setdefault('subtitle_lines', [])
@@ -431,6 +431,9 @@ def _call_claude(prompt: str, max_tokens: int = 8000) -> dict:
         max_tokens=max_tokens,
         messages=[{'role': 'user', 'content': prompt}],
     )
+
+    if response.stop_reason == 'max_tokens':
+        print(f'[claude_client] Warning: response truncated at {max_tokens} tokens — output may be incomplete')
 
     text = response.content[0].text.strip()
 

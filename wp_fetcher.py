@@ -18,7 +18,7 @@ import requests as _requests
 from urllib.parse import urlparse
 
 WP_BASE = 'https://parentdata.org/wp-json/wp/v2'
-HEADERS = {'User-Agent': 'ParentData-StagingTool/1.0'}
+HEADERS = {'User-Agent': 'Mozilla/5.0 (compatible; ParentData-StagingTool/1.0)'}
 
 
 def _wp_auth():

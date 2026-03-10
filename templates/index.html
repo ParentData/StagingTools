@@ -191,6 +191,13 @@
     <div id="group-marketing" style="display:none;">
       <div class="field-group">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="mkt-no-banner"
+                 onchange="var h = this.checked; document.getElementById('mkt-banner').closest('.field-group').style.display = h ? 'none' : ''; document.getElementById('mkt-lemonade').closest('label').style.display = h ? 'none' : '';">
+          No banner
+        </label>
+      </div>
+      <div class="field-group">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
           <input type="checkbox" id="mkt-lemonade"
                  onchange="document.getElementById('mkt-banner').closest('.field-group').style.display = this.checked ? 'none' : ''">
           Use Lemonade sponsor banner
@@ -1457,6 +1464,7 @@ async function generateEmail() {
       featured_image_alt: document.getElementById('f-img-alt').value,
       article_body_html: document.getElementById('f-body').value,
       banner_text: document.getElementById('mkt-banner').value,
+      no_banner: document.getElementById('mkt-no-banner').checked,
       sponsor: document.getElementById('mkt-lemonade').checked ? 'lemonade' : '',
       no_discount: document.getElementById('mkt-no-discount').checked,
       no_intro: document.getElementById('mkt-no-intro').checked,
