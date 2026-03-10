@@ -215,6 +215,33 @@ IMPORTANT:
     return result
 
 
+def _strip_wp_bloat(html: str) -> str:
+    """Strip WordPress attributes that waste tokens without affecting content.
+
+    Removes srcset, sizes, loading, decoding, width/height attrs from images,
+    and strips empty spacer divs and button wrapper blocks.
+    """
+    # Remove srcset and sizes attributes (huge, useless for email)
+    html = re.sub(r'\s+srcset="[^"]*"', '', html)
+    html = re.sub(r'\s+sizes="[^"]*"', '', html)
+    # Remove loading/decoding hints
+    html = re.sub(r'\s+loading="[^"]*"', '', html)
+    html = re.sub(r'\s+decoding="[^"]*"', '', html)
+    # Remove explicit width/height on images (email uses max-width CSS)
+    html = re.sub(r'\s+width="\d+"', '', html)
+    html = re.sub(r'\s+height="\d+"', '', html)
+    # Remove WordPress spacer divs
+    html = re.sub(
+        r'<div[^>]*class="wp-block-spacer"[^>]*></div>', '', html
+    )
+    # Remove "Take me to the bottom line" button blocks
+    html = re.sub(
+        r'<div[^>]*class="wp-block-buttons[^"]*"[^>]*>.*?</div>\s*</div>',
+        '', html, flags=re.S
+    )
+    return html
+
+
 def reformat_wp_content(content_html: str, template_type: str = 'standard') -> dict:
     """
     Reformat raw WordPress block HTML to email-safe inline-styled HTML using Claude.
@@ -228,6 +255,7 @@ def reformat_wp_content(content_html: str, template_type: str = 'standard') -> d
         bottom_line_html: str      — <ul> for fertility, '' for standard
         welcome_html: str          — always ''
     """
+    content_html = _strip_wp_bloat(content_html)
     bottom_line_instruction = ''
     if template_type == 'fertility':
         bottom_line_instruction = """
