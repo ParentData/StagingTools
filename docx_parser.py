@@ -21,6 +21,7 @@ LABEL_PATTERNS = {
     'power_keywords':  r'^power\s+keywords?\s*:\s*(.+)$',
     'photo_credit':    r'^PC\s*:\s*(.+)$',
     'age_groups':      r'^age\s+group(?:\(s\)|s)?\s*:\s*(.+)$',
+    'original_url':    r'^original\s*:\s*(.+)$',
 }
 
 # Detects the staging instructions heading
@@ -89,7 +90,7 @@ def parse_docx(file_path: str) -> dict:
     detected = {
         'title': '', 'subtitle': '', 'author_name': '',
         'author_title': '', 'topic_tags': [], 'power_keywords': [],
-        'photo_credit': '', 'age_groups': [],
+        'photo_credit': '', 'age_groups': [], 'original_url': '',
     }
     for para in article_paras:
         text = para.text.strip()
@@ -124,6 +125,7 @@ def parse_docx(file_path: str) -> dict:
         'detected_power_keywords': detected['power_keywords'],
         'detected_photo_credit': detected['photo_credit'],
         'detected_age_groups': detected['age_groups'],
+        'detected_original_url': detected['original_url'],
         'staging_instructions': staging_instructions,
     }
 
@@ -839,6 +841,481 @@ def parse_simple_docx(file_path: str) -> dict:
         'post_button_html': post_html,
         'button_text': button_text,
         'button_url': button_url,
+    }
+
+
+def parse_baby_send_a_docx(file_path: str) -> dict:
+    """
+    Parse a BabyData "Send A" DOCX (exported from Google Doc) for the
+    multi-section weekly newsletter.
+
+    Actual document structure (not marker-based):
+      Subject Line: <email title>
+      Preheader: BabyData, 1 Week Old
+      From Name: …                         (skipped)
+      <intro paragraph(s)>
+      [BOLD] Here's what other parents are asking …   ← Petey Q&A heading
+      <question text>
+      <answer text>
+      Got a question? Ask Petey …                     (skip)
+      BUTTON: Ask Petey                               (hyperlink → petey_cta_url)
+      [BOLD] Fact or Fiction: <title>                  ← FoF section
+      <answer text>
+      BUTTON: Read more (link)
+      [BOLD] <Article title>                           ← Article section
+      <Article subtitle>
+      <description text>
+      BUTTON: Read more (link)
+      <Video title>                                    ← Video section
+      SCREENSHOT                                       (hyperlink → thumbnail)
+      BUTTON: Watch now (link)
+
+    Returns:
+        {
+            title:           str,
+            age_text:        str,
+            intro_text:      str,
+            qa_pairs:        [{'question': str, 'answer': str}],
+            petey_cta_url:   str,
+            fact_or_fiction:  {'title': str, 'answer': str, 'url': str},
+            article_card:    {'title': str, 'subtitle': str,
+                              'description': str, 'url': str},
+            video_card:      {'title': str, 'url': str, 'thumbnail_url': str},
+        }
+    """
+    from docx.oxml.ns import qn as _qn
+
+    doc = Document(file_path)
+
+    title = ''
+    age_text = ''
+    intro_lines = []
+
+    # Petey Q&A
+    petey_heading = ''
+    petey_question = ''
+    petey_answer_lines = []
+    petey_cta_url = ''
+
+    # Fact or Fiction
+    fof_title = ''
+    fof_answer_lines = []
+    fof_url = ''
+
+    # Article card
+    article_title = ''
+    article_subtitle = ''
+    article_desc_lines = []
+    article_url = ''
+
+    # Video
+    video_title = ''
+    video_url = ''
+    video_thumbnail = ''
+
+    # State machine: metadata → intro → petey → fof → article → video
+    state = 'metadata'
+
+    def _is_separator(text):
+        """Skip decorative separators like single special chars."""
+        return len(text) <= 3 and not text[0].isalnum()
+
+    def _all_runs_bold(para):
+        """True if every non-empty run in the paragraph is bold."""
+        runs = [r for r in para.runs if r.text.strip()]
+        return bool(runs) and all(r.bold for r in runs)
+
+    for para in doc.paragraphs:
+        text = para.text.strip()
+        if not text:
+            continue
+
+        # Skip decorative separators
+        if _is_separator(text):
+            continue
+
+        # === Metadata lines ===
+        m = re.match(r'^Subject\s+line\s*:\s*(.+)$', text, re.I)
+        if m:
+            title = m.group(1).strip()
+            continue
+
+        m = re.match(r'^Preheader\s*:\s*(.+)$', text, re.I)
+        if m:
+            age_match = re.search(
+                r'(\d+\s*(?:week|month)s?\s*old)', m.group(1), re.I,
+            )
+            if age_match:
+                age_text = age_match.group(1).strip()
+            continue
+
+        if re.match(r'^From\s+Name\s*:', text, re.I):
+            continue
+
+        # === "Fact or Fiction:" explicit marker (works from any state) ===
+        fof_m = re.match(r'^Fact\s+or\s+Fiction\s*:\s*(.+)$', text, re.I)
+        if fof_m:
+            fof_title = fof_m.group(1).strip()
+            state = 'fof'
+            continue
+
+        # Also match when the bold heading includes "Fact or Fiction:"
+        if _all_runs_bold(para):
+            fof_m2 = re.match(r'^Fact\s+or\s+Fiction\s*:\s*(.+)$', text, re.I)
+            if fof_m2:
+                fof_title = fof_m2.group(1).strip()
+                state = 'fof'
+                continue
+
+        # === BUTTON handling ===
+        btn_m = re.match(r'^BUTTON\s*:\s*(.+)$', text, re.I)
+        if btn_m:
+            btn_label = btn_m.group(1).strip().lower()
+            url = _get_hyperlink_url(para, doc, _qn)
+
+            if 'petey' in btn_label or 'ask' in btn_label:
+                petey_cta_url = url
+            elif 'watch' in btn_label:
+                video_url = url
+                state = 'done'
+            elif state == 'fof':
+                fof_url = url
+                state = 'post_fof'
+            elif state == 'article':
+                article_url = url
+                state = 'post_article'
+            continue
+
+        # === SCREENSHOT (video thumbnail link) ===
+        if text.upper() == 'SCREENSHOT':
+            url = _get_hyperlink_url(para, doc, _qn)
+            if url:
+                video_thumbnail = url
+            state = 'video'
+            continue
+
+        # === Bold heading transitions ===
+        if _all_runs_bold(para):
+            if state in ('metadata', 'intro'):
+                # First bold heading → Petey Q&A
+                state = 'petey'
+                petey_heading = text
+                continue
+            elif state == 'post_fof':
+                # First bold heading after FoF → Article
+                state = 'article'
+                article_title = text
+                continue
+
+        # === Content by current state ===
+        if state in ('metadata', 'intro'):
+            state = 'intro'
+            intro_lines.append(text)
+        elif state == 'petey':
+            # Skip "Got a question? Ask Petey" type lines
+            if re.search(r'ask\s+petey|got\s+a\s+question', text, re.I):
+                continue
+            if not petey_question:
+                petey_question = text
+            else:
+                petey_answer_lines.append(text)
+        elif state == 'fof':
+            fof_answer_lines.append(text)
+        elif state == 'article':
+            if not article_subtitle:
+                article_subtitle = text
+            else:
+                article_desc_lines.append(text)
+        elif state in ('post_article', 'video'):
+            state = 'video'
+            if not video_title:
+                video_title = text
+
+    return {
+        'title': title,
+        'age_text': age_text,
+        'intro_text': '\n\n'.join(intro_lines),
+        'qa_pairs': [{
+            'question': petey_question,
+            'answer': ' '.join(petey_answer_lines),
+        }] if petey_question else [],
+        'petey_cta_url': petey_cta_url,
+        'fact_or_fiction': {
+            'title': fof_title,
+            'answer': ' '.join(fof_answer_lines),
+            'url': fof_url,
+        },
+        'article_card': {
+            'title': article_title,
+            'subtitle': article_subtitle,
+            'description': ' '.join(article_desc_lines),
+            'url': article_url,
+        },
+        'video_card': {
+            'title': video_title,
+            'url': video_url,
+            'thumbnail_url': video_thumbnail,
+        },
+    }
+
+
+def parse_baby_send_b_docx(file_path: str) -> dict:
+    """
+    Parse a BabyData "Send B" DOCX (exported from Google Doc) for the
+    3-card digest format.
+
+    Expected document structure:
+      Subject Line: <email title>
+      Preheader: BabyData, 1 Week Old
+      From Name: …                         (skipped)
+      <intro paragraph(s)>
+      <Article title>                       (bold run)
+      <Article description>
+      BUTTON: Read more                    (hyperlink URL)
+      ... (repeat for up to 3 articles)
+      Real Talk
+      <quote text>
+
+    Returns:
+        {
+            title:          str,
+            age_text:       str,
+            intro_text:     str,
+            articles:       [{'title': str, 'description': str, 'url': str}]
+                            × up to 3,
+            real_talk_text: str,
+        }
+    """
+    from docx.oxml.ns import qn as _qn
+
+    doc = Document(file_path)
+
+    title = ''
+    age_text = ''
+    intro_lines = []
+    articles = []
+    current_article = None
+    seen_first_bold = False
+    real_talk_lines = []
+    in_real_talk = False
+
+    for para in doc.paragraphs:
+        text = para.text.strip()
+        if not text:
+            continue
+
+        # Subject line
+        m = re.match(r'^Subject\s+line\s*:\s*(.+)$', text, re.I)
+        if m:
+            title = m.group(1).strip()
+            continue
+
+        # Preheader — extract age
+        m = re.match(r'^Preheader\s*:\s*(.+)$', text, re.I)
+        if m:
+            age_match = re.search(
+                r'(\d+\s*(?:week|month)s?\s*old)', m.group(1), re.I,
+            )
+            if age_match:
+                age_text = age_match.group(1).strip()
+            continue
+
+        # From Name — skip
+        if re.match(r'^From\s+Name\s*:', text, re.I):
+            continue
+
+        # "Real Talk" heading — bold paragraph
+        if _is_bold_para(para) and re.match(r'^Real\s+Talk$', text, re.I):
+            in_real_talk = True
+            # Flush any pending article
+            if current_article is not None:
+                articles.append(current_article)
+                current_article = None
+            continue
+
+        # Collecting Real Talk quote lines
+        if in_real_talk:
+            real_talk_lines.append(text)
+            continue
+
+        # BUTTON: … — extract hyperlink URL
+        if re.match(r'^BUTTON\s*:', text, re.I):
+            url = _get_hyperlink_url(para, doc, _qn)
+            if current_article is not None:
+                current_article['url'] = url
+                articles.append(current_article)
+                current_article = None
+            continue
+
+        # Bold paragraph → new article title
+        if _is_bold_para(para):
+            seen_first_bold = True
+            current_article = {'title': text, 'description': '', 'url': ''}
+            continue
+
+        # Plain text
+        if current_article is not None:
+            if not current_article['description']:
+                current_article['description'] = text
+        elif not seen_first_bold:
+            intro_lines.append(text)
+
+    # Flush any incomplete trailing article
+    if current_article is not None:
+        articles.append(current_article)
+
+    return {
+        'title': title,
+        'age_text': age_text,
+        'intro_text': ' '.join(intro_lines),
+        'articles': articles[:3],
+        'real_talk_text': ' '.join(real_talk_lines),
+    }
+
+
+def parse_baby_qa_docx(file_path: str) -> dict:
+    """
+    Parse a BabyData Q&A DOCX (exported from Google Doc).
+
+    Expected document structure:
+      Subject Line: <email title>
+      Preheader: BabyData, 3 Months Old
+      From Name: …                         (skipped)
+      <intro paragraph(s)>                  **FILTER OUT "It's Q&A day for BabyData"**
+      Q: <question text>                    (or bold paragraph as question)
+      A: <answer paragraph(s)>             (until next Q: or end)
+      ... (repeat for 2+ Q&A pairs)
+      Attribution: Today's answers come from...
+
+    Returns:
+        {
+            title:          str,
+            age_text:       str,
+            intro_text:     str,
+            qa_pairs:       [{'question': str, 'answer_html': str}],
+            qa_author_line: str,
+        }
+    """
+    from docx.oxml.ns import qn as _qn
+
+    doc = Document(file_path)
+
+    # Get mammoth HTML for rich answer content
+    with open(file_path, 'rb') as f:
+        mammoth_result = mammoth.convert_to_html(f)
+    mammoth_html = mammoth_result.value
+    mammoth_html, _ = _extract_graph_placeholders(mammoth_html)
+
+    title = ''
+    age_text = ''
+    intro_lines = []
+    qa_pairs = []
+    qa_author_line = ''
+    current_question = None
+    in_intro = True
+
+    _filter_re = re.compile(r"it'?s\s+q&?a\s+day\s+for\s+babydata", re.I)
+
+    for para in doc.paragraphs:
+        text = para.text.strip()
+        if not text:
+            continue
+
+        # Subject line
+        m = re.match(r'^Subject\s+line\s*:\s*(.+)$', text, re.I)
+        if m:
+            title = m.group(1).strip()
+            continue
+
+        # Preheader — extract age
+        m = re.match(r'^Preheader\s*:\s*(.+)$', text, re.I)
+        if m:
+            age_match = re.search(
+                r'(\d+\s*(?:week|month)s?\s*old)', m.group(1), re.I,
+            )
+            if age_match:
+                age_text = age_match.group(1).strip()
+            continue
+
+        # From Name — skip
+        if re.match(r'^From\s+Name\s*:', text, re.I):
+            continue
+
+        # Attribution line
+        if re.match(r"today'?s\s+answers\s+come\s+from", text, re.I):
+            qa_author_line = text
+            continue
+
+        # Question detection: "Q:" prefix or bold paragraph after intro
+        q_match = re.match(r'^Q\s*:\s*(.+)$', text, re.I)
+        if q_match or (not in_intro and _is_bold_para(para)):
+            in_intro = False
+            if current_question is not None:
+                qa_pairs.append(current_question)
+            q_text = q_match.group(1).strip() if q_match else text
+            current_question = {'question': q_text, 'answer_html': ''}
+            continue
+
+        # Intro collection (before first question)
+        if in_intro:
+            if not _filter_re.search(text):
+                intro_lines.append(text)
+            continue
+
+        # Answer text — accumulated but we'll use mammoth HTML below
+
+    # Flush last QA pair
+    if current_question is not None:
+        qa_pairs.append(current_question)
+
+    # Extract answer HTML from mammoth output by splitting at question
+    # boundaries
+    for pair in qa_pairs:
+        q_text = pair['question']
+        # Find question in mammoth HTML
+        idx = mammoth_html.find(q_text)
+        if idx < 0:
+            # Try with first 40 chars
+            idx = mammoth_html.find(q_text[:40])
+        if idx >= 0:
+            # Answer starts after the question's closing tag
+            after = mammoth_html[idx + len(q_text):]
+            # Find closing </p> of question paragraph
+            close_p = after.find('</p>')
+            if close_p >= 0:
+                answer_start = close_p + 4
+                answer_html = after[answer_start:]
+                # Trim at next question or attribution
+                for next_pair in qa_pairs:
+                    if next_pair is pair:
+                        continue
+                    next_idx = answer_html.find(next_pair['question'][:40])
+                    if next_idx >= 0:
+                        # Walk back to find opening <p
+                        cut = answer_html.rfind('<p', 0, next_idx)
+                        if cut >= 0:
+                            answer_html = answer_html[:cut]
+                        break
+                # Also trim at attribution
+                attr_idx = answer_html.lower().find(
+                    "today\u2019s answers come from",
+                )
+                if attr_idx < 0:
+                    attr_idx = answer_html.lower().find(
+                        "today's answers come from",
+                    )
+                if attr_idx >= 0:
+                    cut = answer_html.rfind('<p', 0, attr_idx)
+                    if cut >= 0:
+                        answer_html = answer_html[:cut]
+                pair['answer_html'] = answer_html.strip()
+
+    return {
+        'title': title,
+        'age_text': age_text,
+        'intro_text': ' '.join(intro_lines),
+        'qa_pairs': qa_pairs,
+        'qa_author_line': qa_author_line,
     }
 
 

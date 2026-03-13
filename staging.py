@@ -131,9 +131,57 @@ TEMPLATES = {
         'has_related_reading': False,
         'has_bottom_line': False,
     },
+    'baby_send_a': {
+        'label': 'Newborn Send A',
+        'file': BASE_DIR / 'email_templates' / 'template_baby_send_a.html',
+        'has_welcome': False,
+        'has_author_block': False,
+        'has_related_reading': False,
+        'has_bottom_line': False,
+    },
+    'baby_send_b': {
+        'label': 'Newborn Send B',
+        'file': BASE_DIR / 'email_templates' / 'template_baby_send_b.html',
+        'has_welcome': False,
+        'has_author_block': False,
+        'has_related_reading': False,
+        'has_bottom_line': False,
+    },
+    'baby_article': {
+        'label': 'Baby Article',
+        'file': BASE_DIR / 'email_templates' / 'template_baby_article.html',
+        'has_welcome': False,
+        'has_author_block': False,
+        'has_related_reading': False,
+        'has_bottom_line': True,
+    },
+    'baby_qa': {
+        'label': 'Baby Q&A',
+        'file': BASE_DIR / 'email_templates' / 'template_baby_qa.html',
+        'has_welcome': False,
+        'has_author_block': False,
+        'has_related_reading': False,
+        'has_bottom_line': False,
+    },
     'simple': {
         'label': 'Simple Email',
         'file': BASE_DIR / 'email_templates' / 'template_simple.html',
+        'has_welcome': False,
+        'has_author_block': False,
+        'has_related_reading': False,
+        'has_bottom_line': False,
+    },
+    'marketing_flex': {
+        'label': 'Marketing - Flex',
+        'file': BASE_DIR / 'email_templates' / 'template_marketingflex.html',
+        'has_welcome': False,
+        'has_author_block': False,
+        'has_related_reading': False,
+        'has_bottom_line': False,
+    },
+    'website_only': {
+        'label': 'Website Only',
+        'file': None,
         'has_welcome': False,
         'has_author_block': False,
         'has_related_reading': False,
@@ -247,7 +295,7 @@ def upload():
                 article['content_html'],
                 article.get('featured_image_url', ''),
             )
-            reformat_type = 'fertility' if template_type == 'pregnant_article' else template_type
+            reformat_type = 'fertility' if template_type in ('pregnant_article', 'baby_article') else template_type
             reformatted = reformat_wp_content(content_html, reformat_type)
 
             # Use WP excerpt as subtitle; fall back to Claude-generated if absent
@@ -272,6 +320,9 @@ def upload():
                 'graph_count':         0,
                 'article_url':         wordpress_url,
             }
+            if template_type == 'baby_article':
+                response_data['age_text'] = ''  # User fills in via UI
+
             return jsonify(response_data)
 
         except Exception as e:
@@ -321,6 +372,33 @@ def _process_docx(tmp_path: str, template_type: str = 'standard') -> dict:
     from docx_parser import parse_docx
 
     parsed = parse_docx(tmp_path)
+
+    if template_type == 'website_only':
+        # Website-only: return metadata + body for WordPress push (no email)
+        staging = parsed.get('staging_instructions', {})
+
+        # Strip metadata header lines from mammoth HTML so only article body remains
+        body_html = _strip_metadata_from_html(parsed['mammoth_html'])
+
+        return {
+            'title':              parsed['detected_title'],
+            'subtitle':           parsed['detected_subtitle'],
+            'author_name':        parsed['detected_author_name'],
+            'author_title':       parsed['detected_author_title'],
+            'topic_tags':         parsed['detected_topic_tags'],
+            'power_keywords':     parsed.get('detected_power_keywords', []),
+            'photo_credit':       parsed.get('detected_photo_credit', ''),
+            'age_groups':         parsed.get('detected_age_groups', []),
+            'original_url':       parsed.get('detected_original_url', ''),
+            'article_body_html':  body_html,
+            'graph_count':        parsed.get('graph_count', 0),
+            'inline_graphs':      [
+                {'url': g.get('url', ''), 'alt': g.get('label', '')}
+                for g in staging.get('graphs', [])[:parsed.get('graph_count', 0)]
+            ] if staging.get('graphs') else [],
+            'featured_image_url': staging.get('featured_image_url', ''),
+            'featured_image_alt': staging.get('featured_image_alt', ''),
+        }
 
     if template_type == 'latest_teaser':
         from wp_fetcher import fetch_wp_article
@@ -510,6 +588,10 @@ def _process_docx(tmp_path: str, template_type: str = 'standard') -> dict:
             'articles':   articles,
         }
 
+    if template_type == 'marketing_flex':
+        from docx_parser import parse_simple_docx
+        return parse_simple_docx(tmp_path)
+
     if template_type == 'simple':
         from docx_parser import parse_simple_docx
         return parse_simple_docx(tmp_path)
@@ -537,6 +619,42 @@ def _process_docx(tmp_path: str, template_type: str = 'standard') -> dict:
                         article.setdefault('image_alt', '')
 
         return {'sections': sections}
+
+    if template_type == 'baby_send_a':
+        from docx_parser import parse_baby_send_a_docx
+        return parse_baby_send_a_docx(tmp_path)
+
+    if template_type == 'baby_send_b':
+        from docx_parser import parse_baby_send_b_docx
+        from wp_fetcher import fetch_article_image
+
+        parsed = parse_baby_send_b_docx(tmp_path)
+        articles = parsed.get('articles', [])
+
+        for article in articles:
+            img = {'image_url': '', 'image_alt': '', 'title': ''}
+            if article.get('url'):
+                try:
+                    img = fetch_article_image(article['url'])
+                except Exception:
+                    pass
+            article['image_url'] = img.get('image_url', '')
+            article['image_alt'] = img.get('image_alt', '') or article.get('title', '')
+            if not article.get('title') and img.get('title'):
+                import html as _html
+                article['title'] = _html.unescape(img['title'])
+
+        return {
+            'title': parsed.get('title', ''),
+            'age_text': parsed.get('age_text', ''),
+            'intro_text': parsed.get('intro_text', ''),
+            'articles': articles,
+            'real_talk_text': parsed.get('real_talk_text', ''),
+        }
+
+    if template_type == 'baby_qa':
+        from docx_parser import parse_baby_qa_docx
+        return parse_baby_qa_docx(tmp_path)
 
     from claude_client import extract_fields
     fields = extract_fields(parsed['raw_text'], parsed['mammoth_html'], template_type)
@@ -669,6 +787,39 @@ def _strip_featured_image(content_html: str, featured_image_url: str) -> str:
     return str(soup)
 
 
+def _strip_metadata_from_html(html: str) -> str:
+    """Remove leading metadata paragraphs (Title:, Subtitle:, Author:, etc.) from mammoth HTML.
+
+    Scans top-level <p> elements from the start.  Stops at the first paragraph
+    that does NOT look like a labeled metadata line.  Returns the remainder.
+    """
+    from bs4 import BeautifulSoup as _BS
+
+    soup = _BS(html, 'html.parser')
+
+    for el in list(soup.children):
+        if getattr(el, 'name', None) != 'p':
+            break
+        text = el.get_text(strip=True)
+        if not text or _METADATA_LINE_RE.match(text):
+            el.decompose()
+        else:
+            break
+
+    return str(soup).strip()
+
+
+# Compiled once from docx_parser.LABEL_PATTERNS (lazy — built on first import)
+def _build_metadata_re():
+    from docx_parser import LABEL_PATTERNS
+    return re.compile(
+        '|'.join(f'(?:{p})' for p in LABEL_PATTERNS.values()),
+        re.IGNORECASE,
+    )
+
+_METADATA_LINE_RE = _build_metadata_re()
+
+
 def _strip_name_credentials(name: str) -> str:
     """Return just the person's name, removing title prefixes and credential suffixes."""
     # Strip prefixes: Dr., Prof., Mr., Ms., etc.
@@ -779,14 +930,19 @@ def wp_html():
 
 @app.route('/wp-draft', methods=['POST'])
 def wp_draft():
-    """Create a WordPress draft post from the staged email fields."""
+    """Create a WordPress draft post, or update an existing post if original_url is provided."""
     data = request.get_json(force=True)
     if not data:
         return jsonify({'error': 'No JSON body received'}), 400
 
     try:
-        from wp_client import publish_draft
-        result = publish_draft(data)
+        original_url = data.get('original_url', '').strip()
+        if original_url:
+            from wp_client import publish_or_update
+            result = publish_or_update(data)
+        else:
+            from wp_client import publish_draft
+            result = publish_draft(data)
         return jsonify(result)
     except Exception as e:
         return jsonify({'error': str(e)}), 500

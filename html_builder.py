@@ -119,6 +119,16 @@ def build_email_html(template_path: str, fields: dict, template_type: str = 'sta
         _inject_toddler_digest(soup, fields)
     elif template_type == 'simple':
         _inject_simple(soup, fields)
+    elif template_type == 'marketing_flex':
+        _inject_marketing_flex(soup, fields)
+    elif template_type == 'baby_send_a':
+        _inject_baby_send_a(soup, fields)
+    elif template_type == 'baby_send_b':
+        _inject_baby_send_b(soup, fields)
+    elif template_type == 'baby_article':
+        _inject_baby_article(soup, fields)
+    elif template_type == 'baby_qa':
+        _inject_baby_qa(soup, fields)
     else:
         _update_title(soup, fields)
         _update_headline(soup, fields)
@@ -1058,6 +1068,411 @@ def _update_win_of_week(soup, fields):
         paragraphs[1].append(NavigableString(f'\u2014{win_attribution}'))
 
 
+# ── Baby template injection ─────────────────────────────────────────────────
+
+def _update_baby_banner(soup, fields):
+    """Set the age in the 'Your baby is X.' banner."""
+    banner_p = soup.find('p', class_='news-top-link')
+    if not banner_p:
+        return
+    age_text = fields.get('age_text', '')
+    if not age_text:
+        return
+    base = ("font-family: 'DM Sans', Arial, Helvetica, sans-serif; "
+            "font-size: 18px; letter-spacing: 0; -webkit-text-size-adjust: 100%;")
+    banner_p['style'] = f"margin: 0; color: #000000; {base} padding: 0 15px;"
+    banner_p.clear()
+    new_html = (
+        f'<span style="font-weight: bold; color: #000000; {base}">Your baby is {age_text}.</span> '
+        f'<a href="https://parentdata.org/account/" style="color: #000000; {base} '
+        f'font-style: italic; text-decoration: underline; font-weight: normal;" '
+        f'title="Change Age">Change&nbsp;my&nbsp;baby\'s&nbsp;age.</a>'
+    )
+    banner_p.append(BeautifulSoup(new_html, 'html.parser'))
+
+
+# ── Baby Send A ─────────────────────────────────────────────────────────────
+
+def _inject_baby_send_a(soup, fields):
+    """Inject all fields into the BabyData Send A template."""
+    _update_title(soup, fields)
+    _update_baby_banner(soup, fields)
+    _update_headline(soup, fields)
+    _inject_baby_send_a_intro(soup, fields)
+    _inject_baby_send_a_sections(soup, fields)
+    _update_copyright(soup)
+
+
+def _inject_baby_send_a_intro(soup, fields):
+    """Replace the intro text (p.sub-text elements) in Baby Send A."""
+    intro_text = fields.get('intro_text', '')
+    if not intro_text:
+        return
+    # Find p.sub-text elements (the intro paragraphs below headline)
+    sub_texts = soup.find_all('p', class_='sub-text')
+    if not sub_texts:
+        return
+    paragraphs = [p.strip() for p in intro_text.split('\n\n') if p.strip()]
+    # Replace first p.sub-text with new content, remove extras
+    base_style = sub_texts[0].get('style', '')
+    parent = sub_texts[0].parent
+    for st in sub_texts:
+        st.decompose()
+    for para_text in paragraphs:
+        new_p = soup.new_tag('p', **{'class': 'sub-text', 'style': base_style})
+        # Check for bold wrapping like **text**
+        if para_text.startswith('**') and para_text.endswith('**'):
+            strong = soup.new_tag('strong')
+            strong.append(NavigableString(para_text[2:-2]))
+            new_p.append(strong)
+        else:
+            new_p.append(NavigableString(para_text))
+        parent.append(new_p)
+
+
+def _inject_baby_send_a_sections(soup, fields):
+    """Populate the variable content sections of Baby Send A."""
+    # Q&A bubble pair
+    qa_pairs = fields.get('qa_pairs', [])
+    if qa_pairs:
+        # Find the cream section with bubble divs
+        for td in soup.find_all('td', class_='table-box-mobile'):
+            if '#fffcee' in (td.get('style') or ''):
+                # Find question bubble (border-radius: 50px 0px)
+                q_div = td.find('div', style=re.compile(r'50px 0px 50px 50px'))
+                if q_div:
+                    q_p = q_div.find('p')
+                    if q_p and qa_pairs:
+                        q_p.clear()
+                        q_p.append(NavigableString(qa_pairs[0].get('question', '')))
+                # Find answer bubble (border-radius: 0px 50px)
+                a_div = td.find('div', style=re.compile(r'0px 50px 50px 50px'))
+                if a_div:
+                    a_p = a_div.find('p')
+                    if a_p and qa_pairs:
+                        a_p.clear()
+                        a_p.append(NavigableString(qa_pairs[0].get('answer', '')))
+                break
+
+    # Petey CTA URL (the "Ask Petey" button in the #a9ddf3 section)
+    petey_url = fields.get('petey_cta_url', '')
+    if petey_url:
+        for td in soup.find_all('td', class_='table-box-mobile'):
+            if '#a9ddf3' in (td.get('style') or ''):
+                ask_a = td.find('a', string=re.compile(r'PETEY', re.I))
+                if ask_a:
+                    ask_a['href'] = petey_url
+                break
+
+    # Fact or Fiction
+    fof = fields.get('fact_or_fiction', {})
+    if fof:
+        for td in soup.find_all('td', class_='table-box-mobile'):
+            style = td.get('style') or ''
+            if '#ffffff' in style or 'rgb(255, 255, 255)' in style:
+                fof_img = td.find('img', alt=re.compile(r'fact', re.I))
+                if fof_img:
+                    h3 = td.find('h3')
+                    if h3:
+                        strong = h3.find('strong')
+                        target = strong if strong else h3
+                        target.clear()
+                        target.append(NavigableString(fof.get('title', '')))
+                    # Answer paragraph (after h3)
+                    desc_p = None
+                    for p in td.find_all('p'):
+                        p_style = p.get('style') or ''
+                        if 'font-size: 16px' in p_style:
+                            desc_p = p
+                            break
+                    if desc_p:
+                        desc_p.clear()
+                        desc_p.append(NavigableString(fof.get('answer', '')))
+                    # READ MORE button URL
+                    btn_div = td.find('div', style=re.compile(r'border-radius.*15px'))
+                    if btn_div:
+                        a = btn_div.find('a')
+                        if a:
+                            a['href'] = fof.get('url', '#')
+                    break
+
+    # Article card (the section with h2 uppercase header)
+    card = fields.get('article_card', {})
+    if card:
+        for td in soup.find_all('td', class_='table-box-mobile'):
+            h2 = td.find('h2')
+            if h2 and h2.get_text().strip().isupper():
+                # Update uppercase section header (e.g. "YOUR POSTPARTUM RECOVERY")
+                section_title = card.get('title', '')
+                if section_title:
+                    h2.clear()
+                    h2.append(NavigableString(section_title.upper()))
+                # Image
+                img = td.find('img')
+                if img and card.get('image_url'):
+                    img['src'] = card['image_url']
+                    img['alt'] = card.get('subtitle', '') or card.get('title', '')
+                # Subtitle (h3 below the image)
+                h3 = td.find('h3')
+                if h3:
+                    h3.clear()
+                    h3.append(NavigableString(card.get('subtitle', '')))
+                # Description
+                for p in td.find_all('p'):
+                    if 'font-size: 16px' in (p.get('style') or ''):
+                        p.clear()
+                        p.append(NavigableString(card.get('description', '')))
+                        break
+                # Button URL
+                btn_div = td.find('div', style=re.compile(r'border-radius.*15px'))
+                if btn_div:
+                    a = btn_div.find('a')
+                    if a:
+                        a['href'] = card.get('url', '#')
+                break
+
+    # Video card (side-by-side on desktop, stacks on mobile via .stack-column)
+    video = fields.get('video_card', {})
+    if video:
+        for tr in soup.find_all('tr'):
+            stack_tds = [td for td in tr.find_all('td', recursive=False)
+                        if 'stack-column' in (td.get('class') or [])]
+            if len(stack_tds) >= 2:
+                # Left column: thumbnail
+                left_td = stack_tds[0]
+                thumb_img = left_td.find('img')
+                if thumb_img and video.get('thumbnail_url'):
+                    thumb_img['src'] = video['thumbnail_url']
+                thumb_a = left_td.find('a')
+                if thumb_a:
+                    thumb_a['href'] = video.get('url', '#')
+                # Right column: title + WATCH NOW
+                right_td = stack_tds[1]
+                h3 = right_td.find('h3')
+                if h3:
+                    h3.clear()
+                    h3.append(NavigableString(video.get('title', '')))
+                watch_a = right_td.find('a', string=re.compile(r'WATCH', re.I))
+                if watch_a:
+                    watch_a['href'] = video.get('url', '#')
+                break
+
+
+# ── Baby Send B ─────────────────────────────────────────────────────────────
+
+def _inject_baby_send_b(soup, fields):
+    """Inject all fields into the BabyData Send B template."""
+    _update_title(soup, fields)
+    _update_baby_banner(soup, fields)
+    _update_headline(soup, fields)
+    _update_subtitle(soup, fields)
+    _inject_baby_send_b_cards(soup, fields)
+    _inject_baby_send_b_real_talk(soup, fields)
+    _update_copyright(soup)
+
+
+def _inject_baby_send_b_cards(soup, fields):
+    """Update the 3 article cards in Baby Send B."""
+    articles = fields.get('articles', [])
+    # Find card rows by cream bg + h3
+    card_tds = []
+    for td in soup.find_all('td', class_='table-box-mobile'):
+        if '#fffcee' in (td.get('style') or '') and td.find('h3'):
+            card_tds.append(td)
+
+    for td, article in zip(card_tds[:3], articles[:3]):
+        # Image
+        img = td.find('img')
+        if img and article.get('image_url'):
+            img['src'] = article['image_url']
+            img['alt'] = _escape_attr(article.get('image_alt') or article.get('title', ''))
+        # Title
+        h3 = td.find('h3')
+        if h3:
+            h3.clear()
+            h3.append(NavigableString(article.get('title', '')))
+        # Description - find the paragraph or ul after h3
+        desc_el = td.find('p', style=re.compile(r'font-size:\s*16px'))
+        if desc_el:
+            desc_el.clear()
+            desc_el.append(NavigableString(article.get('description', '')))
+        # Button URL
+        for div in td.find_all('div', style=re.compile(r'border-radius.*15px')):
+            a = div.find('a')
+            if a:
+                a['href'] = article.get('url', '#')
+                break
+
+
+def _inject_baby_send_b_real_talk(soup, fields):
+    """Update the Real Talk quote section in Baby Send B."""
+    real_talk_text = fields.get('real_talk_text', '')
+    if not real_talk_text:
+        return
+    # Find the Real Talk section (blue bg with h3 "Real Talk")
+    for td in soup.find_all('td', class_='table-box-mobile'):
+        h3 = td.find('h3')
+        if h3 and 'Real Talk' in h3.get_text():
+            # Find the quote paragraphs after h3
+            paragraphs = td.find_all('p')
+            for p in paragraphs:
+                # Skip the h3, update the first content paragraph
+                if 'font-size: 18px' in (p.get('style') or ''):
+                    p.clear()
+                    p.append(BeautifulSoup(real_talk_text, 'html.parser'))
+                    break
+            break
+
+
+# ── Baby Article ────────────────────────────────────────────────────────────
+
+def _inject_baby_article(soup, fields):
+    """Inject all fields into the BabyData article template."""
+    _update_title(soup, fields)
+    _update_baby_banner(soup, fields)
+    _update_headline(soup, fields)
+    _update_fertility_subtitle_author(soup, fields)
+    _update_baby_bottom_line(soup, fields)
+    _replace_baby_article_body(soup, fields)
+    _update_copyright(soup)
+
+
+def _update_baby_bottom_line(soup, fields):
+    """Replace the <ul> inside the blue (#a9ddf3) bottom line box."""
+    bottom_line_html = fields.get('bottom_line_html', '')
+    if not bottom_line_html:
+        return
+    _LI_STYLE = (
+        "font-family: 'DM Sans', Arial, Helvetica, sans-serif; "
+        "font-weight: normal; font-size: 18px; line-height: 24px; "
+        "letter-spacing: -0.8px; color: rgb(0, 0, 0); font-style: italic;"
+    )
+    # Find td with #a9ddf3 background that contains a <ul>
+    for td in soup.find_all('td', class_='table-box-mobile'):
+        style = td.get('style') or ''
+        if 'a9ddf3' in style or 'rgb(169, 221, 243)' in style:
+            ul = td.find('ul')
+            if ul:
+                new_ul = BeautifulSoup(bottom_line_html, 'html.parser')
+                # Ensure every <li> is italic-styled
+                for li in new_ul.find_all('li'):
+                    li['style'] = _LI_STYLE
+                ul.replace_with(new_ul)
+                break
+
+
+def _replace_baby_article_body(soup, fields):
+    """Replace the article body content in the white body section."""
+    body_html = fields.get('article_body_html', '')
+    if not body_html:
+        return
+    # The article body is in td.table-box-mobile with white bg after the bottom line
+    target_td = None
+    for td in soup.find_all('td', class_='table-box-mobile'):
+        style = td.get('style') or ''
+        classes = td.get('class', [])
+        if ('no-top-pad' in classes
+                and ('#ffffff' in style or 'rgb(255,255,255)' in style.replace(' ', ''))):
+            target_td = td
+            break
+    if not target_td:
+        return
+    target_td.clear()
+    target_td.append(BeautifulSoup(body_html, 'html.parser'))
+
+
+# ── Baby Q&A ────────────────────────────────────────────────────────────────
+
+def _inject_baby_qa(soup, fields):
+    """Inject all fields into the BabyData Q&A template."""
+    _update_title(soup, fields)
+    _update_baby_banner(soup, fields)
+    _update_headline(soup, fields)
+    _update_qa_intro(soup, fields)
+    _update_baby_qa_pairs(soup, fields)
+    _update_copyright(soup)
+
+
+def _update_baby_qa_pairs(soup, fields):
+    """Populate Q&A pairs in the baby Q&A template."""
+    qa_pairs = fields.get('qa_pairs', [])
+    qa_author_line = fields.get('qa_author_line', '')
+
+    question_imgs = soup.find_all('img', attrs={'alt': 'Question'})
+    answer_imgs = soup.find_all('img', attrs={'alt': 'Answer'})
+
+    # Remove excess Q&A pairs from template if fewer provided
+    for i in range(len(qa_pairs), len(question_imgs)):
+        outer_tr = _outer_email_tr(question_imgs[i], soup)
+        if outer_tr:
+            outer_tr.decompose()
+    for i in range(len(qa_pairs), len(answer_imgs)):
+        outer_tr = _outer_email_tr(answer_imgs[i], soup)
+        if outer_tr:
+            outer_tr.decompose()
+
+    # Re-find after potential decomposition
+    question_imgs = soup.find_all('img', attrs={'alt': 'Question'})
+    answer_imgs = soup.find_all('img', attrs={'alt': 'Answer'})
+
+    for i, pair in enumerate(qa_pairs):
+        # Update question text
+        if i < len(question_imgs):
+            q_td = question_imgs[i].find_parent('td')
+            if q_td:
+                q_table = q_td.find_parent('table')
+                if q_table:
+                    # The question text is in a p after the image td
+                    for td in q_table.find_all('td'):
+                        p = td.find('p', style=re.compile(r'font-style.*italic'))
+                        if p:
+                            p.clear()
+                            p.append(NavigableString(pair.get('question', '')))
+                            break
+
+        # Update answer content
+        if i < len(answer_imgs):
+            a_img = answer_imgs[i]
+            a_outer_td = a_img.find_parent('td', class_='table-box-mobile')
+            if a_outer_td:
+                answer_table = a_outer_td.find('table')
+                if answer_table:
+                    # Find the answer content td (contains multiple <p> tags)
+                    for td in answer_table.find_all('td'):
+                        paragraphs = td.find_all('p')
+                        if len(paragraphs) >= 2:
+                            # Clear all content after the Answer image
+                            answer_html = pair.get('answer_html', '')
+                            td.clear()
+                            td.append(BeautifulSoup(answer_html, 'html.parser'))
+                            break
+
+    # Update attribution line in the last answer section
+    if qa_author_line:
+        # Find the last answer td and add/update attribution
+        if answer_imgs:
+            last_answer_td = answer_imgs[-1].find_parent('td', class_='table-box-mobile')
+            if last_answer_td:
+                # Look for existing attribution paragraph
+                for p in last_answer_td.find_all('p'):
+                    if "today" in p.get_text().lower() and "answers" in p.get_text().lower():
+                        p.clear()
+                        p.append(BeautifulSoup(f'<em>{qa_author_line}</em>', 'html.parser'))
+                        return
+                # If no existing attribution, add one
+                answer_table = last_answer_td.find('table')
+                if answer_table:
+                    last_td = answer_table.find_all('td')[-1] if answer_table.find_all('td') else None
+                    if last_td:
+                        attr_p = BeautifulSoup(
+                            f'<p style="font-family: \'DM Sans\', Arial, Helvetica, sans-serif; '
+                            f'font-weight: normal; font-size: 16px; line-height: 24px; color: #000000;">'
+                            f'<em>{qa_author_line}</em></p>',
+                            'html.parser',
+                        )
+                        last_td.append(attr_p)
+
+
 # ── Fertility Digest template injection ──────────────────────────────────────
 
 def _inject_fertility_digest(soup, fields):
@@ -1797,18 +2212,187 @@ def _inject_simple(soup, fields):
             if span and btn_text:
                 span.string = btn_text.upper()
 
-    # Footer logo: keep left-aligned (prevent apply_email_fixes from centering)
-    footer_logo = soup.find('img', alt='Footer Logo')
-    if footer_logo:
-        style = footer_logo.get('style', '')
-        if 'display' not in style.lower():
-            footer_logo['style'] = 'display:block;' + style
-
     # Copyright year
     copyright_p = soup.find('p', class_='simple-copyright')
     if copyright_p:
         year = datetime.now().year
         copyright_p.string = f'\u00a9 {year} ParentData. All rights reserved.'
+
+
+# ── Marketing Flex template ───────────────────────────────────────────────────
+
+_MFLEX_P_STYLE = (
+    "font-family: 'DM Sans', Arial, Helvetica, sans-serif; "
+    "font-weight: normal; font-size: 16px; line-height: 24px; "
+    "color: #000000; margin-bottom: 16px;"
+)
+_MFLEX_A_STYLE = "color: #054f8b; text-decoration: underline; font-family: 'DM Sans', Arial, Helvetica, sans-serif;"
+
+
+def _inject_marketing_flex(soup, fields):
+    """Inject content into the marketing flex template."""
+    # Title tag
+    if soup.title:
+        title = fields.get('title', '').strip() or 'ParentData'
+        soup.title.string = f'{title} - ParentData'
+
+    # Body text
+    body_td = soup.find('td', class_='mflex-body')
+    if body_td:
+        body_html = fields.get('pre_button_html', '') or fields.get('article_body_html', '')
+        if body_html:
+            body_td.clear()
+            body_td.append(BeautifulSoup(body_html, 'html.parser'))
+        # Apply standard email inline styles to bare tags from mammoth
+        for p in body_td.find_all('p'):
+            if not p.get('style'):
+                p['style'] = _MFLEX_P_STYLE
+        for a in body_td.find_all('a'):
+            if not a.get('style'):
+                a['style'] = _MFLEX_A_STYLE
+
+    # CTA Buttons
+    _update_mflex_buttons(soup, fields)
+
+    # Pricing section (pass soup for _outer_email_tr)
+    _update_mflex_pricing(soup, fields)
+
+    # Copyright year
+    copyright_p = soup.find('p', class_='mflex-copyright')
+    if copyright_p:
+        year = datetime.now().year
+        copyright_p.string = f'Copyright \u00a9 {year} ParentData, All rights reserved.'
+
+
+def _update_mflex_buttons(soup, fields):
+    """Build 1-3 CTA buttons from fields['buttons'] list."""
+    buttons_td = soup.find('td', class_='mflex-buttons')
+    if not buttons_td:
+        return
+
+    buttons = fields.get('buttons', [])
+    if not buttons:
+        # No buttons configured — remove the entire row
+        tr = _outer_email_tr(buttons_td, soup)
+        if tr:
+            tr.decompose()
+        return
+
+    # Clear placeholder content
+    buttons_td.clear()
+
+    for btn in buttons:
+        label = btn.get('label', 'LEARN MORE').strip()
+        url = btn.get('url', '#').strip()
+        style = btn.get('style', 'pill')  # 'pill' or 'minimal'
+        color = btn.get('color', 'yellow')  # 'yellow' or 'white'
+
+        bg = '#fceea9' if color == 'yellow' else '#ffffff'
+        if style == 'pill':
+            radius = '15px'
+            shadow = '0px 4px 4px 0px rgba(0,0,0,0.25)'
+        else:
+            radius = '3px'
+            shadow = 'none'
+
+        btn_html = f'''<table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation" style="max-width: 400px; width: 100%;">
+<tbody><tr><td align="center" style="padding: 8px 0px;">
+<div class="subscribe-btn-mobile" style="display: inline-block; mso-hide: all; width: auto; border-radius: {radius}; background-color: {bg}; border: 2px solid #000000; box-shadow: {shadow};">
+<a href="{url}" rel="noopener" style="display: block; padding: 16px 24px; font-family: 'DM Sans', Arial, Helvetica, sans-serif; font-weight: 800; font-size: 20px; line-height: 20px; letter-spacing: 0.24px; color: #000000; text-decoration: none; text-transform: uppercase; text-align: center; white-space: nowrap;" target="_blank"><span style="font-family: 'DM Sans', Arial, Helvetica, sans-serif; font-size: 20px; color: #000000; text-decoration: none;">{label.upper()}</span></a>
+</div></td></tr></tbody></table>'''
+        buttons_td.append(BeautifulSoup(btn_html, 'html.parser'))
+
+
+def _update_mflex_pricing(soup, fields):
+    """Handle the optional pricing section: remove it or populate cards."""
+    pricing_td = soup.find('td', class_='mflex-pricing')
+    if not pricing_td:
+        return
+
+    if not fields.get('show_pricing'):
+        # Remove the entire pricing row
+        tr = _outer_email_tr(pricing_td, soup)
+        if tr:
+            tr.decompose()
+        return
+
+    cards = fields.get('pricing_cards', [])
+    mode = fields.get('pricing_mode', 'dual')
+
+    # Card 1
+    if cards and len(cards) >= 1:
+        _populate_mflex_card(soup, 'mflex-card-1', cards[0])
+
+    # Card 2 — remove if single mode
+    card2_td = soup.find('td', class_='mflex-card-2')
+    spacer_td = soup.find('td', class_='mflex-pricing-spacer')
+    if mode == 'single':
+        if card2_td:
+            card2_td.decompose()
+        if spacer_td:
+            spacer_td.decompose()
+        # Make card 1 full width
+        card1_td = soup.find('td', class_='mflex-card-1')
+        if card1_td:
+            style = card1_td.get('style', '')
+            style = re.sub(r'width\s*:\s*48%', 'width: 100%', style)
+            style = re.sub(r'padding-right\s*:\s*2%', 'padding-right: 0', style)
+            card1_td['style'] = style
+    elif cards and len(cards) >= 2:
+        _populate_mflex_card(soup, 'mflex-card-2', cards[1])
+
+
+def _populate_mflex_card(soup, card_class, card_data):
+    """Fill a pricing card's fields from card_data dict."""
+    card_td = soup.find('td', class_=card_class)
+    if not card_td:
+        return
+
+    plan_name = card_data.get('plan_name', '')
+    old_price = card_data.get('old_price', '')
+    new_price = card_data.get('new_price', '')
+    badge = card_data.get('badge', '')
+    cta_url = card_data.get('cta_url', '#')
+    cta_text = card_data.get('cta_text', 'Subscribe')
+
+    name_p = card_td.find('p', class_='mflex-plan-name')
+    if name_p and plan_name:
+        name_p.string = plan_name
+
+    old_p = card_td.find('p', class_='mflex-old-price')
+    if old_p:
+        if old_price:
+            old_p.string = old_price
+        else:
+            old_p.decompose()
+
+    new_p = card_td.find('p', class_='mflex-new-price')
+    if new_p and new_price:
+        new_p.string = new_price
+
+    per_unit_p = card_td.find('p', class_='mflex-per-unit')
+    if per_unit_p:
+        per_unit = card_data.get('per_unit', '')
+        if per_unit:
+            per_unit_p.string = per_unit
+        else:
+            per_unit_p.decompose()
+
+    badge_div = card_td.find('div', class_='mflex-badge')
+    if badge_div:
+        if badge:
+            badge_p = badge_div.find('p')
+            if badge_p:
+                badge_p.string = badge
+        else:
+            badge_div.decompose()
+
+    cta_a = card_td.find('a', class_='mflex-card-cta')
+    if cta_a:
+        cta_a['href'] = cta_url
+        span = cta_a.find('span')
+        if span and cta_text:
+            span.string = cta_text.upper()
 
 
 # ── Letter-spacing fix ────────────────────────────────────────────────────────
@@ -1888,7 +2472,11 @@ def apply_email_fixes(html: str) -> str:
     for img in soup.find_all('img'):
         style = img.get('style', '')
         if 'display' not in style.lower():
-            img['style'] = 'display:block;margin:0 auto;' + style
+            # Footer logo stays left-aligned (parent td has text-align:left)
+            if (img.get('alt') or '').lower() == 'footer logo':
+                img['style'] = 'display:block;' + style
+            else:
+                img['style'] = 'display:block;margin:0 auto;' + style
         if not img.has_attr('alt'):
             img['alt'] = ''
 

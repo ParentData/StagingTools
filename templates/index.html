@@ -38,11 +38,19 @@
           <option value="toddler_digest">Toddler Digest</option>
           <option value="toddler_qa">Toddler Q&amp;A</option>
         </optgroup>
+        <optgroup label="Baby">
+          <option value="baby_send_a">Newborn Send A</option>
+          <option value="baby_send_b">Newborn Send B</option>
+          <option value="baby_article">Baby Article</option>
+          <option value="baby_qa">Baby Q&amp;A</option>
+        </optgroup>
         <optgroup label="Other">
           <option value="marketing">Marketing - Full Article Send</option>
           <option value="paid_digest">Paid Digest</option>
           <option value="free_digest">Free Digest</option>
           <option value="simple">Simple Email</option>
+          <option value="marketing_flex">Marketing - Flex</option>
+          <option value="website_only">Website Only</option>
         </optgroup>
       </select>
     </div>
@@ -581,6 +589,160 @@
     </div>
   </section>
 
+  <!-- ── Step 2 (Baby Send A): Review fields ──────────────────────── -->
+  <section id="section-baby-send-a" class="card" hidden>
+    <h2>2. Review Newborn Send A Fields</h2>
+
+    <div class="field-group">
+      <label for="bsa-title">Email Title</label>
+      <input type="text" id="bsa-title" placeholder="e.g. Your Weekly Newborn Update">
+    </div>
+
+    <div class="field-group">
+      <label for="bsa-age-text">Age Text</label>
+      <input type="text" id="bsa-age-text" placeholder="e.g. 1 Week Old" style="max-width:200px;">
+    </div>
+
+    <div class="field-group">
+      <label for="bsa-intro">Intro Text</label>
+      <textarea id="bsa-intro" rows="3" style="width:100%;" placeholder="Editorial intro paragraph…"></textarea>
+    </div>
+
+    <div id="bsa-qa-pairs"></div>
+
+    <div class="field-group" style="border-top:1px solid #e0e0e0;margin-top:20px;padding-top:16px;">
+      <label for="bsa-petey-url">Ask Petey CTA URL</label>
+      <input type="url" id="bsa-petey-url" placeholder="https://parentdata.org/ask-a-question/">
+    </div>
+
+    <div id="bsa-fof-section" style="border-top:1px solid #e0e0e0;margin-top:20px;padding-top:16px;">
+      <h3>Fact or Fiction</h3>
+      <div class="field-group">
+        <label for="bsa-fof-title">Title</label>
+        <input type="text" id="bsa-fof-title" placeholder="e.g. Swaddling can cause hip dysplasia">
+      </div>
+      <div class="field-group">
+        <label for="bsa-fof-answer">Answer</label>
+        <textarea id="bsa-fof-answer" rows="3" style="width:100%;" placeholder="Fiction! While improper swaddling…"></textarea>
+      </div>
+      <div class="field-group">
+        <label for="bsa-fof-url">Read More URL</label>
+        <input type="url" id="bsa-fof-url" placeholder="https://parentdata.org/…">
+      </div>
+    </div>
+
+    <div id="bsa-article-section" style="border-top:1px solid #e0e0e0;margin-top:20px;padding-top:16px;">
+      <h3>Article Card</h3>
+      <div class="field-group">
+        <label for="bsa-art-title">Section Header</label>
+        <p class="hint">Appears as uppercase heading above the image (e.g. YOUR POSTPARTUM RECOVERY).</p>
+        <input type="text" id="bsa-art-title" placeholder="e.g. Your Postpartum Recovery">
+      </div>
+      <div class="field-group">
+        <label for="bsa-art-subtitle">Article Title</label>
+        <input type="text" id="bsa-art-subtitle" placeholder="e.g. Your Postpartum Support Team">
+      </div>
+      <div class="field-group">
+        <label for="bsa-art-desc">Description</label>
+        <textarea id="bsa-art-desc" rows="2" style="width:100%;" placeholder="Article description"></textarea>
+      </div>
+      <div class="field-group">
+        <label for="bsa-art-url">URL</label>
+        <input type="url" id="bsa-art-url" placeholder="https://parentdata.org/…">
+      </div>
+      <div class="field-group image-url-field">
+        <label for="bsa-art-img">Image URL <span class="required">*</span></label>
+        <p class="hint">Upload to Iterable and paste the CDN URL here.</p>
+        <input type="url" id="bsa-art-img" placeholder="https://library.iterable.com/…">
+      </div>
+    </div>
+
+    <div id="bsa-video-section" style="border-top:1px solid #e0e0e0;margin-top:20px;padding-top:16px;">
+      <h3>Video Card</h3>
+      <div class="field-group">
+        <label for="bsa-vid-title">Title</label>
+        <input type="text" id="bsa-vid-title" placeholder="Video title">
+      </div>
+      <div class="field-group">
+        <label for="bsa-vid-url">Video URL</label>
+        <input type="url" id="bsa-vid-url" placeholder="https://youtube.com/… or https://instagram.com/…">
+      </div>
+      <div class="field-group image-url-field">
+        <label for="bsa-vid-thumb">Thumbnail Image URL <span class="required">*</span></label>
+        <p class="hint">Upload the video thumbnail to Iterable and paste the CDN URL here.</p>
+        <input type="url" id="bsa-vid-thumb" placeholder="https://library.iterable.com/…">
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Step 2 (Baby Send B): Review fields ──────────────────────── -->
+  <section id="section-baby-send-b" class="card" hidden>
+    <h2>2. Review Newborn Send B Fields</h2>
+
+    <div class="field-group">
+      <label for="bsb-title">Email Title</label>
+      <input type="text" id="bsb-title" placeholder="e.g. Your Weekly Newborn Update">
+    </div>
+
+    <div class="field-group">
+      <label for="bsb-age-text">Age Text</label>
+      <input type="text" id="bsb-age-text" placeholder="e.g. 1 Week Old" style="max-width:200px;">
+    </div>
+
+    <div class="field-group">
+      <label for="bsb-intro">Intro Text</label>
+      <textarea id="bsb-intro" rows="3" style="width:100%;" placeholder="Editorial intro paragraph…"></textarea>
+    </div>
+
+    <div id="bsb-article-cards"></div>
+
+    <div style="border-top:1px solid #e0e0e0;margin-top:20px;padding-top:16px;">
+      <h3>Real Talk</h3>
+      <div class="field-group">
+        <label for="bsb-real-talk">Quote Text</label>
+        <textarea id="bsb-real-talk" rows="3" style="width:100%;" placeholder="Real Talk testimonial text…"></textarea>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Step 2 (Baby Article): Review fields ─────────────────────── -->
+  <section id="section-baby-article" class="card" hidden>
+    <h2>2. Review Baby Article Fields</h2>
+
+    <div class="field-group">
+      <label for="ba-age-text">Age Text</label>
+      <input type="text" id="ba-age-text" placeholder="e.g. 3 Months Old" style="max-width:200px;">
+    </div>
+  </section>
+
+  <!-- ── Step 2 (Baby Q&A): Review fields ─────────────────────────── -->
+  <section id="section-baby-qa" class="card" hidden>
+    <h2>2. Review Baby Q&amp;A Fields</h2>
+
+    <div class="field-group">
+      <label for="bqa-title">Email Title</label>
+      <input type="text" id="bqa-title" placeholder="e.g. It's Q&A day!">
+    </div>
+
+    <div class="field-group">
+      <label for="bqa-age-text">Age Text</label>
+      <input type="text" id="bqa-age-text" placeholder="e.g. 3 Months Old" style="max-width:200px;">
+    </div>
+
+    <div class="field-group">
+      <label for="bqa-intro">Intro Text</label>
+      <textarea id="bqa-intro" rows="3" style="width:100%;" placeholder="This week's questions are about…"></textarea>
+    </div>
+
+    <div id="bqa-pairs-container"></div>
+
+    <div class="field-group" style="margin-top:16px;">
+      <label for="bqa-author-line">Author Attribution Line</label>
+      <p class="hint">Appears at the bottom of the email in italic. Edit freely.</p>
+      <input type="text" id="bqa-author-line" placeholder="Today&#8217;s answers come from Emily Oster.">
+    </div>
+  </section>
+
   <!-- ── Simple Email Fields ────────────────────────────────────────── -->
   <section id="section-simple" class="card" hidden>
     <h2>2. Review Simple Email Fields</h2>
@@ -604,6 +766,171 @@
       <label for="simple-post-button">Post-button text (HTML)</label>
       <textarea id="simple-post-button" rows="8" class="code-area" placeholder="&lt;p&gt;Text after the button…&lt;/p&gt;"></textarea>
     </div>
+  </section>
+
+  <!-- ── Marketing Flex Fields ──────────────────────────────────────── -->
+  <section id="section-mflex" class="card" hidden>
+    <h2>2. Review Marketing Flex Fields</h2>
+
+    <div class="field-group">
+      <label for="mf-title">Email Title</label>
+      <input type="text" id="mf-title" placeholder="e.g. Don't miss out on 30% off">
+    </div>
+
+    <div class="field-group">
+      <label for="mf-body">Body HTML</label>
+      <details>
+        <summary>Show / hide body</summary>
+        <textarea id="mf-body" rows="16" class="code-area" placeholder="Body HTML will appear here after upload…"></textarea>
+      </details>
+    </div>
+
+    <!-- CTA Buttons -->
+    <div class="field-group">
+      <label>CTA Buttons</label>
+      <div id="mf-buttons-container">
+        <div class="mf-button-row" data-index="0" style="border:1px solid #e0e0e0; border-radius:8px; padding:12px; margin-bottom:8px;">
+          <div style="display:flex;gap:8px;margin-bottom:6px;">
+            <input type="text" id="mf-btn-label-0" placeholder="Button label" style="flex:1;">
+            <input type="url" id="mf-btn-url-0" placeholder="https://…" style="flex:1;">
+          </div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;">
+            <label style="font-weight:400;display:flex;align-items:center;gap:4px;">
+              <input type="radio" name="mf-btn-style-0" value="pill" checked> Pill
+            </label>
+            <label style="font-weight:400;display:flex;align-items:center;gap:4px;">
+              <input type="radio" name="mf-btn-style-0" value="minimal"> Minimal
+            </label>
+            <label style="font-weight:400;display:flex;align-items:center;gap:4px;">
+              <input type="radio" name="mf-btn-color-0" value="yellow" checked> Yellow
+            </label>
+            <label style="font-weight:400;display:flex;align-items:center;gap:4px;">
+              <input type="radio" name="mf-btn-color-0" value="white"> White
+            </label>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="btn-small" onclick="addMfButton()" id="mf-add-btn" style="margin-top:4px;padding:4px 12px;font-size:13px;cursor:pointer;">+ Add Button</button>
+    </div>
+
+    <!-- Pricing Section -->
+    <div class="field-group">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" id="mf-show-pricing" onchange="toggleMfPricing(this.checked)">
+        Include pricing section
+      </label>
+    </div>
+
+    <div id="mf-pricing-fields" style="display:none;">
+      <div class="field-group">
+        <label>Pricing layout</label>
+        <div style="display:flex;gap:16px;">
+          <label style="font-weight:400;display:flex;align-items:center;gap:4px;">
+            <input type="radio" name="mf-pricing-mode" value="dual" checked onchange="toggleMfDualPricing()"> Dual cards
+          </label>
+          <label style="font-weight:400;display:flex;align-items:center;gap:4px;">
+            <input type="radio" name="mf-pricing-mode" value="single" onchange="toggleMfDualPricing()"> Single card
+          </label>
+        </div>
+      </div>
+
+      <fieldset id="mf-card1" style="border:1px solid #e0e0e0;border-radius:8px;padding:12px;margin-bottom:8px;">
+        <legend>Card 1</legend>
+        <div class="field-group"><label>Plan name</label><input type="text" id="mf-plan1-name" placeholder="Annual Plan"></div>
+        <div class="field-group"><label>Old price (strikethrough)</label><input type="text" id="mf-plan1-old" placeholder="$120 (leave empty to hide)"></div>
+        <div class="field-group"><label>New price</label><input type="text" id="mf-plan1-new" placeholder="$84/year"></div>
+        <div class="field-group"><label>Per-unit text</label><input type="text" id="mf-plan1-per" placeholder="($7/month) (leave empty to hide)"></div>
+        <div class="field-group"><label>Badge text</label><input type="text" id="mf-plan1-badge" placeholder="SAVE 20% (leave empty to hide)"></div>
+        <div class="field-group"><label>CTA button text</label><input type="text" id="mf-plan1-cta-text" placeholder="Get Annual"></div>
+        <div class="field-group"><label>CTA URL</label><input type="url" id="mf-plan1-url" placeholder="https://parentdata.org/register/…"></div>
+      </fieldset>
+
+      <fieldset id="mf-card2" style="border:1px solid #e0e0e0;border-radius:8px;padding:12px;margin-bottom:8px;">
+        <legend>Card 2</legend>
+        <div class="field-group"><label>Plan name</label><input type="text" id="mf-plan2-name" placeholder="Monthly Plan"></div>
+        <div class="field-group"><label>Old price (strikethrough)</label><input type="text" id="mf-plan2-old" placeholder="$12 (leave empty to hide)"></div>
+        <div class="field-group"><label>New price</label><input type="text" id="mf-plan2-new" placeholder="$7/month"></div>
+        <div class="field-group"><label>Per-unit text</label><input type="text" id="mf-plan2-per" placeholder="(leave empty to hide)"></div>
+        <div class="field-group"><label>Badge text</label><input type="text" id="mf-plan2-badge" placeholder="PAY AS YOU GO (leave empty to hide)"></div>
+        <div class="field-group"><label>CTA button text</label><input type="text" id="mf-plan2-cta-text" placeholder="Go Monthly"></div>
+        <div class="field-group"><label>CTA URL</label><input type="url" id="mf-plan2-url" placeholder="https://parentdata.org/register/…"></div>
+      </fieldset>
+    </div>
+  </section>
+
+  <!-- ── Step 2 (Website Only): Review Fields ──────────────────────── -->
+  <section id="section-website-only" class="card" hidden>
+    <h2>2. Review Website Fields</h2>
+
+    <div class="field-group">
+      <label for="wo-title">Title</label>
+      <input type="text" id="wo-title" placeholder="Article title">
+    </div>
+
+    <div class="field-group">
+      <label for="wo-subtitle">Subtitle</label>
+      <input type="text" id="wo-subtitle" placeholder="Article subtitle">
+    </div>
+
+    <div class="field-group">
+      <label for="wo-author-name">Author Name</label>
+      <input type="text" id="wo-author-name" placeholder="e.g. Emily Oster">
+    </div>
+
+    <div class="field-group">
+      <label for="wo-author-title">Author Title / Credential</label>
+      <input type="text" id="wo-author-title" placeholder="e.g. PhD">
+    </div>
+
+    <div class="field-group">
+      <label for="wo-tags">Topic Tags</label>
+      <input type="text" id="wo-tags" placeholder="Health and Wellness, Cancer">
+      <p class="hint">Comma-separated.</p>
+    </div>
+
+    <div class="field-group">
+      <label for="wo-age-groups">Age Groups</label>
+      <input type="text" id="wo-age-groups" placeholder="Pregnancy, Baby">
+      <p class="hint">Comma-separated.</p>
+    </div>
+
+    <div class="field-group">
+      <label for="wo-photo-credit">Photo Credit</label>
+      <input type="text" id="wo-photo-credit" placeholder="e.g. Getty Images">
+    </div>
+
+    <div class="field-group">
+      <label for="wo-original-url">Original URL <span class="field-note">— if updating an existing post</span></label>
+      <input type="url" id="wo-original-url" placeholder="https://parentdata.org/existing-article/">
+      <p class="hint">Leave blank to create a new draft instead of updating.</p>
+    </div>
+
+    <div class="field-group image-url-field">
+      <label for="wo-img-url">Featured Image URL <span class="required">*</span></label>
+      <input type="url" id="wo-img-url" placeholder="https://parentdata.org/wp-content/uploads/…">
+    </div>
+
+    <div class="field-group">
+      <label for="wo-img-alt">Featured Image Alt Text</label>
+      <input type="text" id="wo-img-alt" placeholder="Brief description of the image">
+    </div>
+  </section>
+
+  <!-- ── Step 3 (Website Only): Inline Graphs ──────────────────────── -->
+  <section id="section-wo-graphs" class="card" hidden>
+    <h2>3. Inline Graph Images</h2>
+    <p class="hint">The document contains embedded charts or graphs. Paste the image URL for each one.</p>
+    <div id="wo-graph-fields"></div>
+  </section>
+
+  <!-- ── Step 4 (Website Only): Article Body ───────────────────────── -->
+  <section id="section-wo-body" class="card" hidden>
+    <h2>4. Article Body HTML</h2>
+    <p class="hint">Raw HTML from the DOCX. This will be converted to Gutenberg blocks when pushed to WordPress.</p>
+    <details>
+      <summary>Show / hide article body</summary>
+      <textarea id="wo-body" rows="20" class="code-area" placeholder="Article body HTML will appear here after upload…"></textarea>
+    </details>
   </section>
 
   <!-- ── Generate ─────────────────────────────────────────────────────── -->
@@ -672,9 +999,9 @@ function selectTemplate(type) {
     //   Toddler Digest         → Google Doc only
     //   Latest Teaser          → DOCX + Google Doc
     //   (Q&A types have their own areas)
-    const showDocx = type === 'latest_teaser';
-    const showGdoc = type === 'standard' || type === 'fertility_digest' || type === 'latest_teaser' || type === 'paid_digest' || type === 'free_digest' || type === 'toddler_article' || type === 'toddler_qa' || type === 'toddler_digest' || type === 'simple';
-    const showWp   = type === 'fertility' || type === 'marketing' || type === 'pregnant_article';
+    const showDocx = type === 'latest_teaser' || type === 'website_only';
+    const showGdoc = type === 'standard' || type === 'fertility_digest' || type === 'latest_teaser' || type === 'paid_digest' || type === 'free_digest' || type === 'toddler_article' || type === 'toddler_qa' || type === 'toddler_digest' || type === 'simple' || type === 'marketing_flex' || type === 'website_only' || type === 'baby_send_a' || type === 'baby_send_b' || type === 'baby_qa';
+    const showWp   = type === 'fertility' || type === 'marketing' || type === 'pregnant_article' || type === 'baby_article';
 
     document.getElementById('docx-upload-row').style.display    = showDocx ? '' : 'none';
     document.getElementById('docx-gdoc-divider').style.display  = (showDocx && showGdoc) ? '' : 'none';
@@ -685,9 +1012,28 @@ function selectTemplate(type) {
   }
 }
 
-function _showPostUploadSections(isQA, isFertility, isMarketing, isDigest, isLatestTeaser, isPaidDigest, isPregnant, isPregnantQA, isToddlerArticle, isToddlerQA, isToddlerDigest, isSimple) {
-  // Digest, LatestTeaser, PaidDigest, Toddler, and Simple types have dedicated sections; hide all other post-upload sections
-  const showStandardSections = !isQA && !isPregnantQA && !isDigest && !isLatestTeaser && !isPaidDigest && !isToddlerQA && !isToddlerDigest && !isSimple;
+function _showPostUploadSections(type) {
+  const isQA = type === 'qa';
+  const isFertility = type === 'fertility';
+  const isMarketing = type === 'marketing';
+  const isDigest = type === 'fertility_digest';
+  const isLatestTeaser = type === 'latest_teaser';
+  const isPaidDigest = type === 'paid_digest' || type === 'free_digest';
+  const isPregnant = type === 'pregnant_article';
+  const isPregnantQA = type === 'pregnant_qa';
+  const isToddlerArticle = type === 'toddler_article';
+  const isToddlerQA = type === 'toddler_qa';
+  const isToddlerDigest = type === 'toddler_digest';
+  const isSimple = type === 'simple';
+  const isMarketingFlex = type === 'marketing_flex';
+  const isWebsiteOnly = type === 'website_only';
+  const isBabySendA = type === 'baby_send_a';
+  const isBabySendB = type === 'baby_send_b';
+  const isBabyArticle = type === 'baby_article';
+  const isBabyQA = type === 'baby_qa';
+
+  // Types with dedicated sections hide all standard post-upload sections
+  const showStandardSections = !isQA && !isPregnantQA && !isDigest && !isLatestTeaser && !isPaidDigest && !isToddlerQA && !isToddlerDigest && !isSimple && !isMarketingFlex && !isWebsiteOnly && !isBabySendA && !isBabySendB && !isBabyQA;
 
   // Sections common to standard + fertility + marketing + toddler_article
   ['section-fields', 'section-image', 'section-body', 'section-generate'].forEach(id => {
@@ -696,12 +1042,12 @@ function _showPostUploadSections(isQA, isFertility, isMarketing, isDigest, isLat
   });
 
   // Standard-only related reading (also shown for latest_teaser)
-  const showRelated = !isQA && !isPregnantQA && !isFertility && !isMarketing && !isDigest && !isPaidDigest && !isPregnant && !isToddlerArticle && !isToddlerQA && !isToddlerDigest && !isSimple;
+  const showRelated = !isQA && !isPregnantQA && !isFertility && !isMarketing && !isDigest && !isPaidDigest && !isPregnant && !isToddlerArticle && !isToddlerQA && !isToddlerDigest && !isSimple && !isMarketingFlex && !isWebsiteOnly && !isBabySendA && !isBabySendB && !isBabyArticle && !isBabyQA;
   document.getElementById('section-related').style.display = showRelated ? '' : 'none';
   if (showRelated) document.getElementById('section-related').removeAttribute('hidden');
 
-  // Fertility + Pregnant + Toddler Article bottom line
-  const showBottomLine = isFertility || isPregnant || isToddlerArticle;
+  // Fertility + Pregnant + Toddler Article + Baby Article bottom line
+  const showBottomLine = isFertility || isPregnant || isToddlerArticle || isBabyArticle;
   document.getElementById('section-bottomline').style.display = showBottomLine ? '' : 'none';
   if (showBottomLine) document.getElementById('section-bottomline').removeAttribute('hidden');
 
@@ -747,9 +1093,39 @@ function _showPostUploadSections(isQA, isFertility, isMarketing, isDigest, isLat
   document.getElementById('section-toddler-digest').style.display = isToddlerDigest ? '' : 'none';
   if (isToddlerDigest) document.getElementById('section-toddler-digest').removeAttribute('hidden');
 
+  // Baby Send A-only
+  document.getElementById('section-baby-send-a').style.display = isBabySendA ? '' : 'none';
+  if (isBabySendA) document.getElementById('section-baby-send-a').removeAttribute('hidden');
+
+  // Baby Send B-only
+  document.getElementById('section-baby-send-b').style.display = isBabySendB ? '' : 'none';
+  if (isBabySendB) document.getElementById('section-baby-send-b').removeAttribute('hidden');
+
+  // Baby Article-only
+  document.getElementById('section-baby-article').style.display = isBabyArticle ? '' : 'none';
+  if (isBabyArticle) document.getElementById('section-baby-article').removeAttribute('hidden');
+
+  // Baby Q&A-only
+  document.getElementById('section-baby-qa').style.display = isBabyQA ? '' : 'none';
+  if (isBabyQA) document.getElementById('section-baby-qa').removeAttribute('hidden');
+
   // Simple Email-only
   document.getElementById('section-simple').style.display = isSimple ? '' : 'none';
   if (isSimple) document.getElementById('section-simple').removeAttribute('hidden');
+
+  // Marketing Flex-only
+  document.getElementById('section-mflex').style.display = isMarketingFlex ? '' : 'none';
+  if (isMarketingFlex) document.getElementById('section-mflex').removeAttribute('hidden');
+
+  // Website Only sections
+  ['section-website-only', 'section-wo-body'].forEach(id => {
+    document.getElementById(id).style.display = isWebsiteOnly ? '' : 'none';
+    if (isWebsiteOnly) document.getElementById(id).removeAttribute('hidden');
+  });
+  // wo-graphs only if there are graphs
+  if (!isWebsiteOnly) {
+    document.getElementById('section-wo-graphs').style.display = 'none';
+  }
 
   // Always show generate
   const genSection = document.getElementById('section-generate');
@@ -757,12 +1133,22 @@ function _showPostUploadSections(isQA, isFertility, isMarketing, isDigest, isLat
   genSection.removeAttribute('hidden');
 
   // Field-level visibility within section-fields
-  setHide('group-welcome', isFertility || isMarketing || isPregnant || isToddlerArticle);
-  setHide('group-author-url', isFertility || isMarketing || isPregnant || isToddlerArticle);
+  setHide('group-welcome', isFertility || isMarketing || isPregnant || isToddlerArticle || isBabyArticle);
+  setHide('group-author-url', isFertility || isMarketing || isPregnant || isToddlerArticle || isBabyArticle);
   setHide('group-marketing', !isMarketing);
 
   // Fertility/QA-only option in generate section
   setHide('group-update-banner', !(isFertility || isQA));
+
+  // Website Only: change generate button text, hide email-specific results
+  const genBtn = document.getElementById('generate-btn');
+  if (isWebsiteOnly) {
+    genBtn.textContent = 'Stage to WordPress';
+    document.getElementById('result-links').setAttribute('hidden', '');
+    document.getElementById('wp-draft-area').setAttribute('hidden', '');
+  } else {
+    genBtn.textContent = 'Generate Staged Email';
+  }
 }
 
 function setHide(id, hide) {
@@ -803,8 +1189,12 @@ async function handleGoogleDocUrl() {
   document.getElementById('file-name').textContent = '';
   const digestMsg = (currentTemplate === 'fertility_digest' || currentTemplate === 'paid_digest' || currentTemplate === 'free_digest' || currentTemplate === 'toddler_digest' || currentTemplate === 'toddler_article' || currentTemplate === 'toddler_qa')
     ? 'Downloading Google Doc, extracting article links, and fetching article metadata… this may take 30–60 seconds.'
-    : currentTemplate === 'simple'
+    : currentTemplate === 'simple' || currentTemplate === 'marketing_flex'
     ? 'Downloading Google Doc and extracting content…'
+    : currentTemplate === 'website_only'
+    ? 'Downloading Google Doc and extracting metadata + body…'
+    : currentTemplate === 'baby_send_a' || currentTemplate === 'baby_send_b' || currentTemplate === 'baby_qa'
+    ? 'Downloading Google Doc and extracting fields… this may take 20–40 seconds.'
     : 'Downloading Google Doc and extracting fields… this may take 20–40 seconds.';
   showStatus('upload-status', digestMsg, 'info');
   const formData = new FormData();
@@ -880,12 +1270,30 @@ async function _submitUpload(formData) {
     const isToddlerQA = currentTemplate === 'toddler_qa';
     const isToddlerDigest = currentTemplate === 'toddler_digest';
     const isSimple = currentTemplate === 'simple';
+    const isMarketingFlex = currentTemplate === 'marketing_flex';
+    const isWebsiteOnly = currentTemplate === 'website_only';
+    const isBabySendA = currentTemplate === 'baby_send_a';
+    const isBabySendB = currentTemplate === 'baby_send_b';
+    const isBabyArticle = currentTemplate === 'baby_article';
+    const isBabyQA = currentTemplate === 'baby_qa';
 
     if (data.article_url) uploadedArticleUrl = data.article_url;
     uploadedPhotoCredit = data.photo_credit || '';
     uploadedAgeGroups = data.age_groups || [];
 
-    if (isSimple) {
+    if (isBabySendA) {
+      populateBabySendAFields(data);
+    } else if (isBabySendB) {
+      populateBabySendBFields(data);
+    } else if (isBabyArticle) {
+      populateBabyArticleFields(data);
+    } else if (isBabyQA) {
+      populateBabyQAFields(data);
+    } else if (isWebsiteOnly) {
+      populateWebsiteOnlyFields(data);
+    } else if (isMarketingFlex) {
+      populateMarketingFlexFields(data);
+    } else if (isSimple) {
       populateSimpleFields(data);
     } else if (isToddlerArticle) {
       populateToddlerArticleFields(data);
@@ -913,12 +1321,12 @@ async function _submitUpload(formData) {
         document.getElementById('section-graphs').setAttribute('hidden', '');
       }
 
-      if (!isFertility && !isMarketing && !isPregnant && !isToddlerArticle) {
+      if (!isFertility && !isMarketing && !isPregnant && !isToddlerArticle && !isBabyArticle) {
         fetchRelatedArticles(data.topic_tags || [], data.related_articles || []);
       }
     }
 
-    _showPostUploadSections(isQA, isFertility, isMarketing, isDigest, isLatestTeaser, isPaidDigest, isPregnant, isPregnantQA, isToddlerArticle, isToddlerQA, isToddlerDigest, isSimple);
+    _showPostUploadSections(currentTemplate);
     showStatus('upload-status', 'Fields extracted successfully.', 'success');
 
   } catch (err) {
@@ -945,6 +1353,115 @@ function populateSimpleFields(data) {
   document.getElementById('simple-post-button').value = data.post_button_html || '';
   document.getElementById('simple-button-text').value = data.button_text || '';
   document.getElementById('simple-button-url').value = data.button_url || '';
+}
+
+// ── Marketing Flex helpers ──────────────────────────────────────────────────
+function populateMarketingFlexFields(data) {
+  document.getElementById('mf-body').value = data.pre_button_html || data.article_body_html || '';
+}
+
+let _mfButtonCount = 1;
+
+function addMfButton() {
+  if (_mfButtonCount >= 3) return;
+  const i = _mfButtonCount;
+  const container = document.getElementById('mf-buttons-container');
+  const row = document.createElement('div');
+  row.className = 'mf-button-row';
+  row.dataset.index = i;
+  row.style.cssText = 'border:1px solid #e0e0e0;border-radius:8px;padding:12px;margin-bottom:8px;';
+  row.innerHTML = `
+    <div style="display:flex;gap:8px;margin-bottom:6px;">
+      <input type="text" id="mf-btn-label-${i}" placeholder="Button label" style="flex:1;">
+      <input type="url" id="mf-btn-url-${i}" placeholder="https://…" style="flex:1;">
+      <button type="button" onclick="removeMfButton(${i})" style="padding:2px 8px;font-size:12px;cursor:pointer;">✕</button>
+    </div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;">
+      <label style="font-weight:400;display:flex;align-items:center;gap:4px;">
+        <input type="radio" name="mf-btn-style-${i}" value="pill" checked> Pill
+      </label>
+      <label style="font-weight:400;display:flex;align-items:center;gap:4px;">
+        <input type="radio" name="mf-btn-style-${i}" value="minimal"> Minimal
+      </label>
+      <label style="font-weight:400;display:flex;align-items:center;gap:4px;">
+        <input type="radio" name="mf-btn-color-${i}" value="yellow" checked> Yellow
+      </label>
+      <label style="font-weight:400;display:flex;align-items:center;gap:4px;">
+        <input type="radio" name="mf-btn-color-${i}" value="white"> White
+      </label>
+    </div>`;
+  container.appendChild(row);
+  _mfButtonCount++;
+  if (_mfButtonCount >= 3) document.getElementById('mf-add-btn').style.display = 'none';
+}
+
+function removeMfButton(index) {
+  const row = document.querySelector(`.mf-button-row[data-index="${index}"]`);
+  if (row) row.remove();
+  document.getElementById('mf-add-btn').style.display = '';
+}
+
+function toggleMfPricing(checked) {
+  document.getElementById('mf-pricing-fields').style.display = checked ? '' : 'none';
+}
+
+function toggleMfDualPricing() {
+  const mode = document.querySelector('input[name="mf-pricing-mode"]:checked').value;
+  document.getElementById('mf-card2').style.display = mode === 'dual' ? '' : 'none';
+}
+
+function buildMarketingFlexPayload() {
+  const buttons = [];
+  document.querySelectorAll('.mf-button-row').forEach(row => {
+    const i = row.dataset.index;
+    const label = document.getElementById(`mf-btn-label-${i}`);
+    const url = document.getElementById(`mf-btn-url-${i}`);
+    const styleEl = document.querySelector(`input[name="mf-btn-style-${i}"]:checked`);
+    const colorEl = document.querySelector(`input[name="mf-btn-color-${i}"]:checked`);
+    if (label && url) {
+      buttons.push({
+        label: label.value,
+        url: url.value,
+        style: styleEl ? styleEl.value : 'pill',
+        color: colorEl ? colorEl.value : 'yellow',
+      });
+    }
+  });
+
+  const payload = {
+    template_type: 'marketing_flex',
+    title: document.getElementById('mf-title').value,
+    pre_button_html: document.getElementById('mf-body').value,
+    buttons: buttons,
+    show_pricing: document.getElementById('mf-show-pricing').checked,
+    pricing_mode: document.querySelector('input[name="mf-pricing-mode"]:checked').value,
+    pricing_cards: [],
+  };
+
+  if (payload.show_pricing) {
+    payload.pricing_cards.push({
+      plan_name: document.getElementById('mf-plan1-name').value,
+      old_price: document.getElementById('mf-plan1-old').value,
+      new_price: document.getElementById('mf-plan1-new').value,
+      per_unit: document.getElementById('mf-plan1-per').value,
+      badge: document.getElementById('mf-plan1-badge').value,
+      cta_text: document.getElementById('mf-plan1-cta-text').value,
+      cta_url: document.getElementById('mf-plan1-url').value,
+    });
+    if (payload.pricing_mode === 'dual') {
+      payload.pricing_cards.push({
+        plan_name: document.getElementById('mf-plan2-name').value,
+        old_price: document.getElementById('mf-plan2-old').value,
+        new_price: document.getElementById('mf-plan2-new').value,
+        per_unit: document.getElementById('mf-plan2-per').value,
+        badge: document.getElementById('mf-plan2-badge').value,
+        cta_text: document.getElementById('mf-plan2-cta-text').value,
+        cta_url: document.getElementById('mf-plan2-url').value,
+      });
+    }
+  }
+
+  return payload;
 }
 
 // Store qa_authors from upload response for use at generate time
@@ -1074,6 +1591,153 @@ function buildToddlerDigestCards(articles) {
         </div>
       </div>
     `);
+  }
+}
+
+function populateBabySendAFields(data) {
+  document.getElementById('bsa-title').value = data.title || '';
+  document.getElementById('bsa-age-text').value = data.age_text || '';
+  document.getElementById('bsa-intro').value = data.intro_text || '';
+
+  // Build Q&A pair fields dynamically
+  const container = document.getElementById('bsa-qa-pairs');
+  container.innerHTML = '';
+  const pairs = data.qa_pairs || [];
+  for (let i = 0; i < pairs.length; i++) {
+    container.insertAdjacentHTML('beforeend', `
+      <div style="border-top:1px solid #e0e0e0;margin-top:20px;padding-top:16px;">
+        <h3>Q&amp;A ${i + 1}</h3>
+        <div class="field-group">
+          <label for="bsa-q-${i}">Question</label>
+          <textarea id="bsa-q-${i}" rows="2" style="width:100%;">${_esc(pairs[i].question || '')}</textarea>
+        </div>
+        <div class="field-group">
+          <label for="bsa-a-${i}">Answer</label>
+          <textarea id="bsa-a-${i}" rows="3" style="width:100%;">${_esc(pairs[i].answer || '')}</textarea>
+        </div>
+      </div>
+    `);
+  }
+  _babySendAQACount = pairs.length;
+
+  // Petey CTA URL
+  document.getElementById('bsa-petey-url').value = data.petey_cta_url || 'https://parentdata.org/ask-a-question/';
+
+  // Fact or Fiction
+  const fof = data.fact_or_fiction || {};
+  document.getElementById('bsa-fof-title').value = fof.title || '';
+  document.getElementById('bsa-fof-answer').value = fof.answer || '';
+  document.getElementById('bsa-fof-url').value = fof.url || '';
+
+  // Article card
+  const art = data.article_card || {};
+  document.getElementById('bsa-art-title').value = art.title || '';
+  document.getElementById('bsa-art-subtitle').value = art.subtitle || '';
+  document.getElementById('bsa-art-desc').value = art.description || '';
+  document.getElementById('bsa-art-url').value = art.url || '';
+  document.getElementById('bsa-art-img').value = '';  // always manual — no auto image
+
+  // Video card
+  const vid = data.video_card || {};
+  document.getElementById('bsa-vid-title').value = vid.title || '';
+  document.getElementById('bsa-vid-url').value = vid.url || '';
+  document.getElementById('bsa-vid-thumb').value = '';  // always manual upload
+}
+let _babySendAQACount = 0;
+
+function populateBabySendBFields(data) {
+  document.getElementById('bsb-title').value = data.title || '';
+  document.getElementById('bsb-age-text').value = data.age_text || '';
+  document.getElementById('bsb-intro').value = data.intro_text || '';
+  document.getElementById('bsb-real-talk').value = data.real_talk_text || '';
+
+  // Build article cards
+  const container = document.getElementById('bsb-article-cards');
+  container.innerHTML = '';
+  const articles = data.articles || [];
+  for (let i = 0; i < 3; i++) {
+    const art = articles[i] || {};
+    container.insertAdjacentHTML('beforeend', `
+      <div style="border-top:1px solid #e0e0e0;margin-top:20px;padding-top:16px;">
+        <h3>Article ${i + 1}</h3>
+        <div class="field-group">
+          <label for="bsb-art-title-${i}">Title</label>
+          <input type="text" id="bsb-art-title-${i}" value="${_esc(art.title || '')}" placeholder="Article title">
+        </div>
+        <div class="field-group">
+          <label for="bsb-art-desc-${i}">Description</label>
+          <textarea id="bsb-art-desc-${i}" rows="2" style="width:100%;">${_esc(art.description || '')}</textarea>
+        </div>
+        <div class="field-group">
+          <label for="bsb-art-url-${i}">URL</label>
+          <input type="url" id="bsb-art-url-${i}" value="${_esc(art.url || '')}" placeholder="https://parentdata.org/…">
+        </div>
+        <div class="field-group image-url-field">
+          <label for="bsb-art-img-${i}">Image URL${art.image_url ? ' <span style="font-weight:400;color:#2a7a2a;">(auto-fetched)</span>' : ' <span class="required">*</span>'}</label>
+          <input type="url" id="bsb-art-img-${i}" value="${_esc(art.image_url || '')}" placeholder="https://parentdata.org/wp-content/uploads/…">
+        </div>
+      </div>
+    `);
+  }
+}
+
+function populateBabyArticleFields(data) {
+  // Reuse standard populateFields for title/subtitle/body/image/bottomline
+  populateFields(data);
+  document.getElementById('ba-age-text').value = data.age_text || '';
+}
+
+function populateBabyQAFields(data) {
+  document.getElementById('bqa-title').value = data.title || '';
+  document.getElementById('bqa-age-text').value = data.age_text || '';
+  document.getElementById('bqa-intro').value = data.intro_text || '';
+  document.getElementById('bqa-author-line').value = data.qa_author_line || '';
+
+  // Build Q&A pairs dynamically
+  const container = document.getElementById('bqa-pairs-container');
+  container.innerHTML = '';
+  const pairs = data.qa_pairs || [];
+  for (let i = 0; i < pairs.length; i++) {
+    container.insertAdjacentHTML('beforeend', `
+      <div style="border-top:1px solid #e0e0e0;margin-top:20px;padding-top:16px;">
+        <h3>Q&amp;A ${i + 1}</h3>
+        <div class="field-group">
+          <label for="bqa-q-${i}">Question</label>
+          <textarea id="bqa-q-${i}" rows="2" style="width:100%;">${_esc(pairs[i].question || '')}</textarea>
+        </div>
+        <div class="field-group">
+          <label for="bqa-a-${i}">Answer HTML</label>
+          <details>
+            <summary>Show / hide answer</summary>
+            <textarea id="bqa-a-${i}" rows="10" class="code-area">${_esc(pairs[i].answer_html || '')}</textarea>
+          </details>
+        </div>
+      </div>
+    `);
+  }
+  _babyQAPairCount = pairs.length;
+}
+let _babyQAPairCount = 0;
+
+function populateWebsiteOnlyFields(data) {
+  document.getElementById('wo-title').value = data.title || '';
+  document.getElementById('wo-subtitle').value = data.subtitle || '';
+  document.getElementById('wo-author-name').value = data.author_name || '';
+  document.getElementById('wo-author-title').value = data.author_title || '';
+  document.getElementById('wo-tags').value = (data.topic_tags || []).join(', ');
+  document.getElementById('wo-age-groups').value = (data.age_groups || []).join(', ');
+  document.getElementById('wo-photo-credit').value = data.photo_credit || '';
+  document.getElementById('wo-original-url').value = data.original_url || '';
+  document.getElementById('wo-img-url').value = data.featured_image_url || '';
+  document.getElementById('wo-img-alt').value = data.featured_image_alt || '';
+  document.getElementById('wo-body').value = data.article_body_html || '';
+
+  if (data.graph_count > 0) {
+    buildGraphFields(data.graph_count, data.inline_graphs || [], 'wo-graph');
+    document.getElementById('section-wo-graphs').style.display = '';
+    document.getElementById('section-wo-graphs').removeAttribute('hidden');
+  } else {
+    document.getElementById('section-wo-graphs').style.display = 'none';
   }
 }
 
@@ -1285,10 +1949,101 @@ async function generateEmail() {
   const isToddlerQA = currentTemplate === 'toddler_qa';
   const isToddlerDigest = currentTemplate === 'toddler_digest';
   const isSimple = currentTemplate === 'simple';
+  const isMarketingFlex = currentTemplate === 'marketing_flex';
+  const isWebsiteOnly = currentTemplate === 'website_only';
+  const isBabySendA = currentTemplate === 'baby_send_a';
+  const isBabySendB = currentTemplate === 'baby_send_b';
+  const isBabyArticle = currentTemplate === 'baby_article';
+  const isBabyQA = currentTemplate === 'baby_qa';
 
   let payload;
 
-  if (isSimple) {
+  if (isBabySendA) {
+    const qaPairs = [];
+    for (let i = 0; i < _babySendAQACount; i++) {
+      qaPairs.push({
+        question: document.getElementById(`bsa-q-${i}`).value,
+        answer: document.getElementById(`bsa-a-${i}`).value,
+      });
+    }
+    payload = {
+      template_type: 'baby_send_a',
+      title: document.getElementById('bsa-title').value,
+      age_text: document.getElementById('bsa-age-text').value,
+      intro_text: document.getElementById('bsa-intro').value,
+      qa_pairs: qaPairs,
+      petey_cta_url: document.getElementById('bsa-petey-url').value,
+      fact_or_fiction: {
+        title: document.getElementById('bsa-fof-title').value,
+        answer: document.getElementById('bsa-fof-answer').value,
+        url: document.getElementById('bsa-fof-url').value,
+      },
+      article_card: {
+        title: document.getElementById('bsa-art-title').value,
+        subtitle: document.getElementById('bsa-art-subtitle').value,
+        description: document.getElementById('bsa-art-desc').value,
+        url: document.getElementById('bsa-art-url').value,
+        image_url: document.getElementById('bsa-art-img').value,
+      },
+      video_card: {
+        title: document.getElementById('bsa-vid-title').value,
+        url: document.getElementById('bsa-vid-url').value,
+        thumbnail_url: document.getElementById('bsa-vid-thumb').value,
+      },
+    };
+  } else if (isBabySendB) {
+    payload = {
+      template_type: 'baby_send_b',
+      title: document.getElementById('bsb-title').value,
+      age_text: document.getElementById('bsb-age-text').value,
+      intro_text: document.getElementById('bsb-intro').value,
+      real_talk_text: document.getElementById('bsb-real-talk').value,
+      articles: [0, 1, 2].map(i => ({
+        title: document.getElementById(`bsb-art-title-${i}`).value,
+        description: document.getElementById(`bsb-art-desc-${i}`).value,
+        url: document.getElementById(`bsb-art-url-${i}`).value,
+        image_url: document.getElementById(`bsb-art-img-${i}`).value,
+        image_alt: document.getElementById(`bsb-art-title-${i}`).value,
+      })),
+    };
+  } else if (isBabyArticle) {
+    const subtitleLines = document.getElementById('f-subtitle').value
+      .split('\n').map(s => s.trim()).filter(Boolean);
+    payload = {
+      template_type: 'baby_article',
+      age_text: document.getElementById('ba-age-text').value,
+      title: document.getElementById('f-title').value,
+      subtitle_lines: subtitleLines,
+      author_name: document.getElementById('f-author-name').value,
+      featured_image_url: document.getElementById('f-img-url').value,
+      featured_image_alt: document.getElementById('f-img-alt').value,
+      article_body_html: document.getElementById('f-body').value,
+      bottom_line_html: document.getElementById('f-bottomline').value,
+      article_url: uploadedArticleUrl,
+    };
+  } else if (isBabyQA) {
+    const qaPairs = [];
+    for (let i = 0; i < _babyQAPairCount; i++) {
+      qaPairs.push({
+        question: document.getElementById(`bqa-q-${i}`).value,
+        answer_html: document.getElementById(`bqa-a-${i}`).value,
+      });
+    }
+    payload = {
+      template_type: 'baby_qa',
+      title: document.getElementById('bqa-title').value,
+      age_text: document.getElementById('bqa-age-text').value,
+      intro_text: document.getElementById('bqa-intro').value,
+      qa_pairs: qaPairs,
+      qa_author_line: document.getElementById('bqa-author-line').value,
+    };
+  } else if (isWebsiteOnly) {
+    // Website Only: go directly to WordPress (no email generation)
+    await stageToWordPress();
+    return;
+  } else if (isMarketingFlex) {
+    payload = buildMarketingFlexPayload();
+  } else if (isSimple) {
     payload = {
       template_type: 'simple',
       pre_button_html: document.getElementById('simple-pre-button').value,
@@ -1564,9 +2319,70 @@ async function generateEmail() {
   }
 }
 
+// ── Website Only: Stage to WordPress ─────────────────────────────────────────
+async function stageToWordPress() {
+  showStatus('generate-status', 'Pushing to WordPress… this may take 15–30 seconds.', 'info');
+  document.getElementById('result-links').setAttribute('hidden', '');
+
+  const topicTags = document.getElementById('wo-tags').value
+    .split(',').map(s => s.trim()).filter(Boolean);
+  const ageGroups = document.getElementById('wo-age-groups').value
+    .split(',').map(s => s.trim()).filter(Boolean);
+
+  const inlineGraphs = [];
+  let gi = 1;
+  while (document.getElementById(`wo-graph-${gi}-url`)) {
+    inlineGraphs.push({
+      url: document.getElementById(`wo-graph-${gi}-url`).value,
+      alt: document.getElementById(`wo-graph-${gi}-alt`).value,
+    });
+    gi++;
+  }
+
+  const payload = {
+    title: document.getElementById('wo-title').value,
+    article_body_html: document.getElementById('wo-body').value,
+    featured_image_url: document.getElementById('wo-img-url').value,
+    featured_image_alt: document.getElementById('wo-img-alt').value,
+    photo_credit: document.getElementById('wo-photo-credit').value,
+    author_name: document.getElementById('wo-author-name').value,
+    topic_tags: topicTags,
+    age_groups: ageGroups,
+    original_url: document.getElementById('wo-original-url').value,
+    inline_graphs: inlineGraphs,
+  };
+
+  try {
+    const resp = await fetch('/wp-draft', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await resp.json();
+
+    if (!resp.ok || data.error) {
+      showStatus('generate-status', `Error: ${data.error || resp.statusText}`, 'error');
+      return;
+    }
+
+    const action = payload.original_url ? 'updated' : 'created as draft';
+    showStatus('generate-status', `Post ${action} successfully!`, 'success');
+
+    // Show WP links
+    const wpResult = document.getElementById('wp-draft-result');
+    document.getElementById('wp-draft-link').href = data.edit_url || '#';
+    wpResult.removeAttribute('hidden');
+    document.getElementById('wp-draft-area').removeAttribute('hidden');
+    document.getElementById('wp-draft-status').setAttribute('hidden', '');
+  } catch (err) {
+    showStatus('generate-status', `Network error: ${err.message}`, 'error');
+  }
+}
+
 // ── Inline graphs ────────────────────────────────────────────────────────────
-function buildGraphFields(count, prefill = []) {
-  const container = document.getElementById('graph-fields');
+function buildGraphFields(count, prefill = [], idPrefix = 'graph') {
+  const containerId = idPrefix === 'graph' ? 'graph-fields' : `${idPrefix}-fields`;
+  const container = document.getElementById(containerId);
   container.innerHTML = '';
   for (let i = 1; i <= count; i++) {
     const pre = prefill[i - 1] || {};
@@ -1575,11 +2391,11 @@ function buildGraphFields(count, prefill = []) {
         <h3>Graph ${i}</h3>
         <div class="field-group image-url-field">
           <label>Image URL <span class="required">*</span></label>
-          <input type="url" id="graph-${i}-url" value="${pre.url || ''}" placeholder="https://library.iterable.com/…">
+          <input type="url" id="${idPrefix}-${i}-url" value="${pre.url || ''}" placeholder="https://library.iterable.com/…">
         </div>
         <div class="field-group">
           <label>Alt text</label>
-          <input type="text" id="graph-${i}-alt" value="${pre.alt || ''}" placeholder="e.g. Measles cases by week since 2022">
+          <input type="text" id="${idPrefix}-${i}-alt" value="${pre.alt || ''}" placeholder="e.g. Measles cases by week since 2022">
         </div>
       </div>
     `);

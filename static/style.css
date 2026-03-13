@@ -353,3 +353,8 @@ details[open] summary { margin-bottom: 10px; }
 #result-links {
   margin-top: 6px;
 }
+
+/* ── Baby accent colour ──────────────────────────────────────────────── */
+.baby-accent .card h2 { color: #4aa8d8; }
+.baby-accent .btn-primary { background: #4aa8d8; }
+.baby-accent .btn-primary:hover { background: #3a95c4; }
