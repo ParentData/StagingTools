@@ -733,14 +733,6 @@
       <label for="bqa-intro">Intro Text</label>
       <textarea id="bqa-intro" rows="3" style="width:100%;" placeholder="This week's questions are about…"></textarea>
     </div>
-
-    <div id="bqa-pairs-container"></div>
-
-    <div class="field-group" style="margin-top:16px;">
-      <label for="bqa-author-line">Author Attribution Line</label>
-      <p class="hint">Appears at the bottom of the email in italic. Edit freely.</p>
-      <input type="text" id="bqa-author-line" placeholder="Today&#8217;s answers come from Emily Oster.">
-    </div>
   </section>
 
   <!-- ── Simple Email Fields ────────────────────────────────────────── -->
@@ -1052,7 +1044,7 @@ function _showPostUploadSections(type) {
   if (showBottomLine) document.getElementById('section-bottomline').removeAttribute('hidden');
 
   // QA pairs 1 & 2 (shown for fertility QA, pregnant QA, and toddler QA)
-  const showQAPairs = isQA || isPregnantQA || isToddlerQA;
+  const showQAPairs = isQA || isPregnantQA || isToddlerQA || isBabyQA;
   ['section-qa1', 'section-qa2'].forEach(id => {
     document.getElementById(id).style.display = showQAPairs ? '' : 'none';
     if (showQAPairs) document.getElementById(id).removeAttribute('hidden');
@@ -1064,7 +1056,7 @@ function _showPostUploadSections(type) {
   if (showQA3) document.getElementById('section-qa3').removeAttribute('hidden');
 
   // Move author attribution line: for fertility QA it's in section-qa2, for pregnant/toddler QA it's in section-qa3
-  setHide('qa-author-line-group', isPregnantQA || isToddlerQA);
+  setHide('qa-author-line-group', isPregnantQA || isToddlerQA || isBabyQA);
 
   // section-intro is no longer shown post-upload; intro text lives in the upload form
   document.getElementById('section-intro').style.display = 'none';
@@ -1187,13 +1179,13 @@ async function handleGoogleDocUrl() {
   const url = document.getElementById('gdoc-url').value.trim();
   if (!url) return;
   document.getElementById('file-name').textContent = '';
-  const digestMsg = (currentTemplate === 'fertility_digest' || currentTemplate === 'paid_digest' || currentTemplate === 'free_digest' || currentTemplate === 'toddler_digest' || currentTemplate === 'toddler_article' || currentTemplate === 'toddler_qa')
+  const digestMsg = (currentTemplate === 'fertility_digest' || currentTemplate === 'paid_digest' || currentTemplate === 'free_digest' || currentTemplate === 'toddler_digest' || currentTemplate === 'toddler_article' || currentTemplate === 'toddler_qa' || currentTemplate === 'baby_qa')
     ? 'Downloading Google Doc, extracting article links, and fetching article metadata… this may take 30–60 seconds.'
     : currentTemplate === 'simple' || currentTemplate === 'marketing_flex'
     ? 'Downloading Google Doc and extracting content…'
     : currentTemplate === 'website_only'
     ? 'Downloading Google Doc and extracting metadata + body…'
-    : currentTemplate === 'baby_send_a' || currentTemplate === 'baby_send_b' || currentTemplate === 'baby_qa'
+    : currentTemplate === 'baby_send_a' || currentTemplate === 'baby_send_b'
     ? 'Downloading Google Doc and extracting fields… this may take 20–40 seconds.'
     : 'Downloading Google Doc and extracting fields… this may take 20–40 seconds.';
   showStatus('upload-status', digestMsg, 'info');
@@ -1665,8 +1657,9 @@ function populateBabySendBFields(data) {
           <input type="text" id="bsb-art-title-${i}" value="${_esc(art.title || '')}" placeholder="Article title">
         </div>
         <div class="field-group">
-          <label for="bsb-art-desc-${i}">Description</label>
-          <textarea id="bsb-art-desc-${i}" rows="2" style="width:100%;">${_esc(art.description || '')}</textarea>
+          <label for="bsb-art-desc-${i}">Bottom Line Text</label>
+          <p class="hint">One item per line. Multiple lines → bullet list.</p>
+          <textarea id="bsb-art-desc-${i}" rows="3" style="width:100%;">${_esc((art.description_bullets && art.description_bullets.length ? art.description_bullets.join('\n') : art.description) || '')}</textarea>
         </div>
         <div class="field-group">
           <label for="bsb-art-url-${i}">URL</label>
@@ -1691,33 +1684,28 @@ function populateBabyQAFields(data) {
   document.getElementById('bqa-title').value = data.title || '';
   document.getElementById('bqa-age-text').value = data.age_text || '';
   document.getElementById('bqa-intro').value = data.intro_text || '';
-  document.getElementById('bqa-author-line').value = data.qa_author_line || '';
 
-  // Build Q&A pairs dynamically
-  const container = document.getElementById('bqa-pairs-container');
-  container.innerHTML = '';
-  const pairs = data.qa_pairs || [];
-  for (let i = 0; i < pairs.length; i++) {
-    container.insertAdjacentHTML('beforeend', `
-      <div style="border-top:1px solid #e0e0e0;margin-top:20px;padding-top:16px;">
-        <h3>Q&amp;A ${i + 1}</h3>
-        <div class="field-group">
-          <label for="bqa-q-${i}">Question</label>
-          <textarea id="bqa-q-${i}" rows="2" style="width:100%;">${_esc(pairs[i].question || '')}</textarea>
-        </div>
-        <div class="field-group">
-          <label for="bqa-a-${i}">Answer HTML</label>
-          <details>
-            <summary>Show / hide answer</summary>
-            <textarea id="bqa-a-${i}" rows="10" class="code-area">${_esc(pairs[i].answer_html || '')}</textarea>
-          </details>
-        </div>
-      </div>
-    `);
+  // Populate shared Q&A sections (same as toddler_qa)
+  _qaAuthors = data.qa_authors || [];
+  const qa1 = data.qa1 || {};
+  document.getElementById('qa1-question').value = qa1.question_text || '';
+  document.getElementById('qa1-author').value = qa1.question_author || '';
+  document.getElementById('qa1-answer').value = qa1.answer_html || '';
+  const qa2 = data.qa2 || {};
+  document.getElementById('qa2-question').value = qa2.question_text || '';
+  document.getElementById('qa2-author').value = qa2.question_author || '';
+  document.getElementById('qa2-answer').value = qa2.answer_html || '';
+
+  // Build author attribution line
+  const authors = _qaAuthors;
+  let authorLine = '';
+  if (authors.length === 1) {
+    authorLine = `Today\u2019s answers come from ${authors[0]}.`;
+  } else if (authors.length >= 2) {
+    authorLine = `Today\u2019s answers come from ${authors.slice(0, -1).join(', ')} and ${authors[authors.length - 1]}.`;
   }
-  _babyQAPairCount = pairs.length;
+  document.getElementById('pqa-author-line').value = authorLine;
 }
-let _babyQAPairCount = 0;
 
 function populateWebsiteOnlyFields(data) {
   document.getElementById('wo-title').value = data.title || '';
@@ -1998,13 +1986,19 @@ async function generateEmail() {
       age_text: document.getElementById('bsb-age-text').value,
       intro_text: document.getElementById('bsb-intro').value,
       real_talk_text: document.getElementById('bsb-real-talk').value,
-      articles: [0, 1, 2].map(i => ({
-        title: document.getElementById(`bsb-art-title-${i}`).value,
-        description: document.getElementById(`bsb-art-desc-${i}`).value,
-        url: document.getElementById(`bsb-art-url-${i}`).value,
-        image_url: document.getElementById(`bsb-art-img-${i}`).value,
-        image_alt: document.getElementById(`bsb-art-title-${i}`).value,
-      })),
+      articles: [0, 1, 2].map(i => {
+        const raw = document.getElementById(`bsb-art-desc-${i}`).value;
+        const lines = raw.split('\n').map(s => s.trim()).filter(Boolean);
+        const hasBullets = lines.length > 1;
+        return {
+          title: document.getElementById(`bsb-art-title-${i}`).value,
+          description: hasBullets ? '' : (lines[0] || ''),
+          description_bullets: hasBullets ? lines : [],
+          url: document.getElementById(`bsb-art-url-${i}`).value,
+          image_url: document.getElementById(`bsb-art-img-${i}`).value,
+          image_alt: document.getElementById(`bsb-art-title-${i}`).value,
+        };
+      }),
     };
   } else if (isBabyArticle) {
     const subtitleLines = document.getElementById('f-subtitle').value
@@ -2015,6 +2009,7 @@ async function generateEmail() {
       title: document.getElementById('f-title').value,
       subtitle_lines: subtitleLines,
       author_name: document.getElementById('f-author-name').value,
+      author_title: document.getElementById('f-author-title').value,
       featured_image_url: document.getElementById('f-img-url').value,
       featured_image_alt: document.getElementById('f-img-alt').value,
       article_body_html: document.getElementById('f-body').value,
@@ -2022,20 +2017,22 @@ async function generateEmail() {
       article_url: uploadedArticleUrl,
     };
   } else if (isBabyQA) {
-    const qaPairs = [];
-    for (let i = 0; i < _babyQAPairCount; i++) {
-      qaPairs.push({
-        question: document.getElementById(`bqa-q-${i}`).value,
-        answer_html: document.getElementById(`bqa-a-${i}`).value,
-      });
-    }
     payload = {
       template_type: 'baby_qa',
       title: document.getElementById('bqa-title').value,
       age_text: document.getElementById('bqa-age-text').value,
       intro_text: document.getElementById('bqa-intro').value,
-      qa_pairs: qaPairs,
-      qa_author_line: document.getElementById('bqa-author-line').value,
+      qa_author_line: document.getElementById('pqa-author-line').value,
+      qa1: {
+        question_text: document.getElementById('qa1-question').value,
+        question_author: document.getElementById('qa1-author').value,
+        answer_html: document.getElementById('qa1-answer').value,
+      },
+      qa2: {
+        question_text: document.getElementById('qa2-question').value,
+        question_author: document.getElementById('qa2-author').value,
+        answer_html: document.getElementById('qa2-answer').value,
+      },
     };
   } else if (isWebsiteOnly) {
     // Website Only: go directly to WordPress (no email generation)

@@ -1078,15 +1078,16 @@ def _update_baby_banner(soup, fields):
     age_text = fields.get('age_text', '')
     if not age_text:
         return
+    age_text_lower = age_text.lower()
     base = ("font-family: 'DM Sans', Arial, Helvetica, sans-serif; "
             "font-size: 18px; letter-spacing: 0; -webkit-text-size-adjust: 100%;")
     banner_p['style'] = f"margin: 0; color: #000000; {base} padding: 0 15px;"
     banner_p.clear()
     new_html = (
-        f'<span style="font-weight: bold; color: #000000; {base}">Your baby is {age_text}.</span> '
+        f'<span style="font-weight: bold; color: #000000; {base}">Your baby is {age_text_lower}!</span> '
         f'<a href="https://parentdata.org/account/" style="color: #000000; {base} '
         f'font-style: italic; text-decoration: underline; font-weight: normal;" '
-        f'title="Change Age">Change&nbsp;my&nbsp;baby\'s&nbsp;age.</a>'
+        f'title="Change Age">Change&nbsp;age?</a>'
     )
     banner_p.append(BeautifulSoup(new_html, 'html.parser'))
 
@@ -1265,6 +1266,9 @@ def _inject_baby_send_b(soup, fields):
     _update_title(soup, fields)
     _update_baby_banner(soup, fields)
     _update_headline(soup, fields)
+    # Map intro_text → subtitle_lines for the shared subtitle helper
+    if fields.get('intro_text') and not fields.get('subtitle_lines'):
+        fields['subtitle_lines'] = [fields['intro_text']]
     _update_subtitle(soup, fields)
     _inject_baby_send_b_cards(soup, fields)
     _inject_baby_send_b_real_talk(soup, fields)
@@ -1280,6 +1284,11 @@ def _inject_baby_send_b_cards(soup, fields):
         if '#fffcee' in (td.get('style') or '') and td.find('h3'):
             card_tds.append(td)
 
+    _desc_style = (
+        "margin: 0; font-family: 'DM Sans', Arial, Helvetica, sans-serif; "
+        "font-weight: 400; font-size: 16px; line-height: 24px; color: #000000;"
+    )
+
     for td, article in zip(card_tds[:3], articles[:3]):
         # Image
         img = td.find('img')
@@ -1291,11 +1300,36 @@ def _inject_baby_send_b_cards(soup, fields):
         if h3:
             h3.clear()
             h3.append(NavigableString(article.get('title', '')))
-        # Description - find the paragraph or ul after h3
-        desc_el = td.find('p', style=re.compile(r'font-size:\s*16px'))
-        if desc_el:
-            desc_el.clear()
-            desc_el.append(NavigableString(article.get('description', '')))
+        # Description — replace the td that holds the bottom-line text
+        # This td contains either a <p> or <p> + <ul>; replace all content
+        # with a single styled <p> containing the description.
+        desc_td = None
+        for inner_td in td.find_all('td', style=re.compile(r'padding-bottom:\s*24px')):
+            if inner_td.find('p', style=re.compile(r'font-size:\s*16px')):
+                desc_td = inner_td
+                break
+        if desc_td:
+            desc_td.clear()
+            bullets = article.get('description_bullets', [])
+            if bullets:
+                # Render as "The bottom line:" label + bullet list
+                label_p = BeautifulSoup(
+                    f'<p style="{_desc_style}"><span style="font-weight:bold;">The bottom line:</span></p>',
+                    'html.parser',
+                )
+                desc_td.append(label_p)
+                li_html = ''.join(
+                    f'<li style="{_desc_style}">{b}</li>' for b in bullets
+                )
+                ul = BeautifulSoup(f'<ul>{li_html}</ul>', 'html.parser')
+                desc_td.append(ul)
+            else:
+                desc_text = article.get('description', '')
+                new_p = BeautifulSoup(
+                    f'<p style="{_desc_style}"><span style="font-weight:bold;">The bottom line: </span>{desc_text}</p>',
+                    'html.parser',
+                )
+                desc_td.append(new_p)
         # Button URL
         for div in td.find_all('div', style=re.compile(r'border-radius.*15px')):
             a = div.find('a')
@@ -1344,8 +1378,8 @@ def _update_baby_bottom_line(soup, fields):
         return
     _LI_STYLE = (
         "font-family: 'DM Sans', Arial, Helvetica, sans-serif; "
-        "font-weight: normal; font-size: 18px; line-height: 24px; "
-        "letter-spacing: -0.8px; color: rgb(0, 0, 0); font-style: italic;"
+        "font-weight: normal; font-size: 16px; line-height: 26px; "
+        "color: rgb(0, 0, 0);"
     )
     # Find td with #a9ddf3 background that contains a <ul>
     for td in soup.find_all('td', class_='table-box-mobile'):
@@ -1395,7 +1429,15 @@ def _inject_baby_qa(soup, fields):
 
 def _update_baby_qa_pairs(soup, fields):
     """Populate Q&A pairs in the baby Q&A template."""
-    qa_pairs = fields.get('qa_pairs', [])
+    # Convert qa1/qa2 format to qa_pairs list
+    qa_pairs = []
+    for key in ('qa1', 'qa2'):
+        qa = fields.get(key, {})
+        if qa and (qa.get('question_text') or qa.get('answer_html')):
+            qa_pairs.append({
+                'question': qa.get('question_text', ''),
+                'answer_html': qa.get('answer_html', ''),
+            })
     qa_author_line = fields.get('qa_author_line', '')
 
     question_imgs = soup.find_all('img', attrs={'alt': 'Question'})
@@ -2472,8 +2514,9 @@ def apply_email_fixes(html: str) -> str:
     for img in soup.find_all('img'):
         style = img.get('style', '')
         if 'display' not in style.lower():
-            # Footer logo stays left-aligned (parent td has text-align:left)
-            if (img.get('alt') or '').lower() == 'footer logo':
+            # Some images should stay left-aligned (parent td has text-align:left)
+            alt_lower = (img.get('alt') or '').lower()
+            if alt_lower in ('footer logo', 'question', 'answer'):
                 img['style'] = 'display:block;' + style
             else:
                 img['style'] = 'display:block;margin:0 auto;' + style
@@ -2518,6 +2561,9 @@ def apply_email_fixes(html: str) -> str:
             )
             if bottom not in ('0', '0px', '0em'):
                 continue  # has nonzero bottom margin already
+            # Explicit margin:0 means spacing is intentional — don't override
+            # (e.g. footer paragraphs where parent <td> handles spacing)
+            continue
         p['style'] = style.rstrip('; ') + '; margin-bottom: 16px;'
 
     # 6c. Replace empty <div></div> spacers with a visible spacer

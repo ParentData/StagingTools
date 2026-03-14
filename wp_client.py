@@ -383,7 +383,70 @@ def create_draft(
     }
 
 
-def publish_draft(fields: dict) -> dict:
+def resolve_post_id(url: str) -> int | None:
+    """Extract slug from a parentdata.org URL and look up the post ID."""
+    path = urlparse(url).path.strip('/')
+    slug = path.split('/')[-1] if path else ''
+    if not slug:
+        return None
+    resp = _session.get(
+        f'{WP_API}/posts',
+        params={'slug': slug, 'per_page': 1},
+        auth=_wp_auth(),
+        timeout=15,
+    )
+    resp.raise_for_status()
+    results = resp.json()
+    if results:
+        return results[0]['id']
+    return None
+
+
+def update_post(post_id: int, **fields) -> dict:
+    """Update an existing WordPress post. Only non-empty fields are sent."""
+    payload = {}
+    field_map = {
+        'title': 'title',
+        'content': 'content',
+        'excerpt': 'excerpt',
+        'slug': 'slug',
+        'featured_media': 'featured_media',
+        'categories': 'categories',
+        'post-topic': 'post-topic',
+        'post-type': 'post-type',
+        'coauthors': 'coauthors',
+    }
+    for key, wp_key in field_map.items():
+        val = fields.get(key)
+        if val:  # skip None, empty string, empty list, 0
+            payload[wp_key] = val
+
+    meta = fields.get('meta')
+    if meta:
+        payload['meta'] = meta
+
+    resp = _session.post(
+        f'{WP_API}/posts/{post_id}',
+        json=payload,
+        auth=_wp_auth(),
+        timeout=30,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    return {
+        'id': post_id,
+        'edit_url': f'{WP_SITE_URL}/wp-admin/post.php?post={post_id}&action=edit',
+        'preview_url': data.get('link', f'{WP_SITE_URL}/?p={post_id}&preview=true'),
+    }
+
+
+def _prepare_post_fields(fields: dict) -> dict:
+    """Extract, convert, and resolve all common WordPress post fields.
+
+    Returns a dict with: title, content, excerpt, slug, featured_media_id,
+    category_ids, post_topic_ids, post_type_ids, coauthor_ids,
+    meta_description, focus_keyword.
+    """
     title = fields.get('title', '')
     body_html = fields.get('article_body_html', '')
     graphs = fields.get('inline_graphs', [])
@@ -392,6 +455,7 @@ def publish_draft(fields: dict) -> dict:
     topic_tags = fields.get('topic_tags', [])
     age_groups = fields.get('age_groups', [])
     photo_credit = fields.get('photo_credit', '')
+    author_name = fields.get('author_name', '')
 
     content = strip_email_styles(
         body_html, graphs,
@@ -412,7 +476,6 @@ def publish_draft(fields: dict) -> dict:
         except Exception:
             pass
 
-    # Topic tags → post-topic taxonomy
     post_topic_ids = []
     for tag_name in topic_tags:
         tag_name = tag_name.strip()
@@ -423,7 +486,6 @@ def publish_draft(fields: dict) -> dict:
         except Exception as e:
             print(f'[wp_client] Warning: could not resolve post-topic "{tag_name}": {e}')
 
-    # Age groups → categories
     category_ids = []
     for group in age_groups:
         group = group.strip()
@@ -434,11 +496,6 @@ def publish_draft(fields: dict) -> dict:
         except Exception as e:
             print(f'[wp_client] Warning: could not resolve category "{group}": {e}')
 
-    # Post type → "Article" (term 151 in post-type taxonomy)
-    post_type_ids = [WP_POST_TYPE_ARTICLE]
-
-    # Author — look up via Co-Authors Plus taxonomy
-    author_name = fields.get('author_name', '')
     coauthor_ids = []
     if author_name:
         try:
@@ -450,12 +507,65 @@ def publish_draft(fields: dict) -> dict:
         except Exception as e:
             print(f'[wp_client] Warning: coauthor lookup failed for "{author_name}": {e}')
 
+    return {
+        'title': title,
+        'content': content,
+        'wp_meta': wp_meta,
+        'featured_media_id': featured_media_id,
+        'category_ids': category_ids,
+        'post_topic_ids': post_topic_ids,
+        'post_type_ids': [WP_POST_TYPE_ARTICLE],
+        'coauthor_ids': coauthor_ids,
+    }
+
+
+def publish_or_update(fields: dict) -> dict:
+    """Create a new draft or update an existing post based on original_url."""
+    original_url = fields.get('original_url', '').strip()
+    prepared = _prepare_post_fields(fields)
+    wp_meta = prepared['wp_meta']
+
+    if original_url:
+        post_id = resolve_post_id(original_url)
+        if not post_id:
+            raise ValueError(f'Could not find post for URL: {original_url}')
+        meta = {}
+        if wp_meta.get('meta_description'):
+            meta['rank_math_description'] = wp_meta['meta_description']
+        if wp_meta.get('focus_keyword'):
+            meta['rank_math_focus_keyword'] = wp_meta['focus_keyword']
+        return update_post(
+            post_id,
+            title=prepared['title'],
+            content=prepared['content'],
+            excerpt=wp_meta.get('excerpt', ''),
+            featured_media=prepared['featured_media_id'],
+            categories=prepared['category_ids'],
+            **{'post-topic': prepared['post_topic_ids']},
+            **{'post-type': prepared['post_type_ids']},
+            coauthors=prepared['coauthor_ids'],
+            meta=meta or None,
+        )
+    else:
+        return _create_draft_from_prepared(prepared)
+
+
+def publish_draft(fields: dict) -> dict:
+    prepared = _prepare_post_fields(fields)
+    return _create_draft_from_prepared(prepared)
+
+
+def _create_draft_from_prepared(prepared: dict) -> dict:
+    """Create a WordPress draft from a _prepare_post_fields result."""
+    wp_meta = prepared['wp_meta']
     return create_draft(
-        title=title, content=content,
+        title=prepared['title'], content=prepared['content'],
         excerpt=wp_meta.get('excerpt', ''), slug=wp_meta.get('slug', ''),
-        featured_media_id=featured_media_id,
-        category_ids=category_ids, post_topic_ids=post_topic_ids,
-        post_type_ids=post_type_ids, coauthor_ids=coauthor_ids,
+        featured_media_id=prepared['featured_media_id'],
+        category_ids=prepared['category_ids'],
+        post_topic_ids=prepared['post_topic_ids'],
+        post_type_ids=prepared['post_type_ids'],
+        coauthor_ids=prepared['coauthor_ids'],
         meta_description=wp_meta.get('meta_description', ''),
         focus_keyword=wp_meta.get('focus_keyword', ''),
     )

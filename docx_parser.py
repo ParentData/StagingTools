@@ -1066,14 +1066,17 @@ def parse_baby_send_b_docx(file_path: str) -> dict:
 
     Expected document structure:
       Subject Line: <email title>
-      Preheader: BabyData, 1 Week Old
+      Preheader: Plus more reads for week 1, from BabyData
       From Name: …                         (skipped)
       <intro paragraph(s)>
-      <Article title>                       (bold run)
-      <Article description>
-      BUTTON: Read more                    (hyperlink URL)
-      ... (repeat for up to 3 articles)
-      Real Talk
+      — (divider)
+      <Article title>                       (plain text, first line after divider)
+      The bottom line: <description lines>
+      BUTTON: Read more (link)              (hyperlink URL)
+      — (divider, repeat for 3 articles)
+      — (divider)
+      Real Talk: <topic>
+      <intro line>
       <quote text>
 
     Returns:
@@ -1095,9 +1098,12 @@ def parse_baby_send_b_docx(file_path: str) -> dict:
     intro_lines = []
     articles = []
     current_article = None
-    seen_first_bold = False
     real_talk_lines = []
     in_real_talk = False
+    seen_first_divider = False
+
+    _divider_re = re.compile(r'^[\u2014\u2013\-—–]{1,3}$')
+    _bottom_line_re = re.compile(r'^The\s+bottom\s+line\s*:\s*', re.I)
 
     for para in doc.paragraphs:
         text = para.text.strip()
@@ -1110,22 +1116,43 @@ def parse_baby_send_b_docx(file_path: str) -> dict:
             title = m.group(1).strip()
             continue
 
-        # Preheader — extract age
+        # Preheader — extract age (handles "week 1" or "1 week old" etc.)
         m = re.match(r'^Preheader\s*:\s*(.+)$', text, re.I)
         if m:
+            preheader = m.group(1)
+            # Try "X months/weeks old" first
             age_match = re.search(
-                r'(\d+\s*(?:week|month)s?\s*old)', m.group(1), re.I,
+                r'(\d+\s*(?:week|month)s?\s*old)', preheader, re.I,
             )
             if age_match:
                 age_text = age_match.group(1).strip()
+            else:
+                # Try "week X" or "month X" (convert to "X week(s) old")
+                age_match = re.search(
+                    r'(week|month)\s+(\d+)', preheader, re.I,
+                )
+                if age_match:
+                    unit = age_match.group(1).lower()
+                    num = age_match.group(2)
+                    plural = 's' if int(num) != 1 else ''
+                    age_text = f'{num} {unit}{plural} old'
             continue
 
         # From Name — skip
         if re.match(r'^From\s+Name\s*:', text, re.I):
             continue
 
-        # "Real Talk" heading — bold paragraph
-        if _is_bold_para(para) and re.match(r'^Real\s+Talk$', text, re.I):
+        # Divider line (em dash, en dash, or hyphen)
+        if _divider_re.match(text):
+            # Flush any pending article
+            if current_article is not None:
+                articles.append(current_article)
+                current_article = None
+            seen_first_divider = True
+            continue
+
+        # "Real Talk" heading (with optional subtitle like "Real Talk: Postpartum")
+        if re.match(r'^Real\s+Talk', text, re.I):
             in_real_talk = True
             # Flush any pending article
             if current_article is not None:
@@ -1133,7 +1160,7 @@ def parse_baby_send_b_docx(file_path: str) -> dict:
                 current_article = None
             continue
 
-        # Collecting Real Talk quote lines
+        # Collecting Real Talk lines
         if in_real_talk:
             real_talk_lines.append(text)
             continue
@@ -1142,27 +1169,57 @@ def parse_baby_send_b_docx(file_path: str) -> dict:
         if re.match(r'^BUTTON\s*:', text, re.I):
             url = _get_hyperlink_url(para, doc, _qn)
             if current_article is not None:
-                current_article['url'] = url
+                current_article['url'] = url or ''
                 articles.append(current_article)
                 current_article = None
             continue
 
-        # Bold paragraph → new article title
-        if _is_bold_para(para):
-            seen_first_bold = True
-            current_article = {'title': text, 'description': '', 'url': ''}
+        # After first divider: article sections
+        if seen_first_divider:
+            # Check if paragraph is a DOCX list item (bullet)
+            _numPr = para._element.find(
+                './/{http://schemas.openxmlformats.org/wordprocessingml/2006/main}numPr',
+            )
+            is_list_item = _numPr is not None
+
+            # "The bottom line:" text → article description
+            bl_match = _bottom_line_re.match(text)
+            if bl_match:
+                desc_text = text[bl_match.end():].strip()
+                if current_article is not None and desc_text:
+                    current_article['description_items'].append(desc_text)
+                continue
+
+            # If no current article, this is the article title
+            if current_article is None:
+                current_article = {
+                    'title': text, 'description_items': [],
+                    'has_bullets': False, 'url': '',
+                }
+            else:
+                # Additional description lines
+                current_article['description_items'].append(text)
+                if is_list_item:
+                    current_article['has_bullets'] = True
             continue
 
-        # Plain text
-        if current_article is not None:
-            if not current_article['description']:
-                current_article['description'] = text
-        elif not seen_first_bold:
-            intro_lines.append(text)
+        # Before first divider: intro text
+        intro_lines.append(text)
 
     # Flush any incomplete trailing article
     if current_article is not None:
         articles.append(current_article)
+
+    # Convert internal description_items to output format
+    for art in articles:
+        items = art.pop('description_items', [])
+        has_bullets = art.pop('has_bullets', False)
+        if has_bullets:
+            art['description_bullets'] = items
+            art['description'] = ''
+        else:
+            art['description'] = ' '.join(items)
+            art['description_bullets'] = []
 
     return {
         'title': title,
@@ -1182,39 +1239,29 @@ def parse_baby_qa_docx(file_path: str) -> dict:
       Preheader: BabyData, 3 Months Old
       From Name: …                         (skipped)
       <intro paragraph(s)>                  **FILTER OUT "It's Q&A day for BabyData"**
-      Q: <question text>                    (or bold paragraph as question)
-      A: <answer paragraph(s)>             (until next Q: or end)
-      ... (repeat for 2+ Q&A pairs)
-      Attribution: Today's answers come from...
+      <article URL 1>                      (bare URL or hyperlink)
+      <article URL 2>
 
     Returns:
         {
-            title:          str,
-            age_text:       str,
-            intro_text:     str,
-            qa_pairs:       [{'question': str, 'answer_html': str}],
-            qa_author_line: str,
+            title:      str,
+            age_text:   str,
+            intro_text: str,
+            article_urls: [str] × 2,
         }
     """
     from docx.oxml.ns import qn as _qn
 
     doc = Document(file_path)
 
-    # Get mammoth HTML for rich answer content
-    with open(file_path, 'rb') as f:
-        mammoth_result = mammoth.convert_to_html(f)
-    mammoth_html = mammoth_result.value
-    mammoth_html, _ = _extract_graph_placeholders(mammoth_html)
+    _pd_url_re = re.compile(r'https?://(?:www\.)?parentdata\.org/\S+', re.I)
+    _filter_re = re.compile(r"it['\u2019]?s\s+q&?a\s+day\s+for\s+babydata", re.I)
 
     title = ''
     age_text = ''
     intro_lines = []
-    qa_pairs = []
-    qa_author_line = ''
-    current_question = None
-    in_intro = True
-
-    _filter_re = re.compile(r"it'?s\s+q&?a\s+day\s+for\s+babydata", re.I)
+    article_urls = []
+    seen_first_url = False
 
     for para in doc.paragraphs:
         text = para.text.strip()
@@ -1241,81 +1288,31 @@ def parse_baby_qa_docx(file_path: str) -> dict:
         if re.match(r'^From\s+Name\s*:', text, re.I):
             continue
 
-        # Attribution line
-        if re.match(r"today'?s\s+answers\s+come\s+from", text, re.I):
-            qa_author_line = text
+        # ParentData URL → article link
+        url = ''
+        url_match = _pd_url_re.search(text)
+        if url_match:
+            url = url_match.group(0).rstrip('.,;:')
+        else:
+            hl_url = _get_hyperlink_url(para, doc, _qn)
+            if hl_url and _pd_url_re.match(hl_url):
+                url = hl_url
+
+        if url:
+            seen_first_url = True
+            article_urls.append(url)
             continue
 
-        # Question detection: "Q:" prefix or bold paragraph after intro
-        q_match = re.match(r'^Q\s*:\s*(.+)$', text, re.I)
-        if q_match or (not in_intro and _is_bold_para(para)):
-            in_intro = False
-            if current_question is not None:
-                qa_pairs.append(current_question)
-            q_text = q_match.group(1).strip() if q_match else text
-            current_question = {'question': q_text, 'answer_html': ''}
-            continue
-
-        # Intro collection (before first question)
-        if in_intro:
+        # Plain text before first URL → intro (filter out "It's Q&A day" line)
+        if not seen_first_url:
             if not _filter_re.search(text):
                 intro_lines.append(text)
-            continue
-
-        # Answer text — accumulated but we'll use mammoth HTML below
-
-    # Flush last QA pair
-    if current_question is not None:
-        qa_pairs.append(current_question)
-
-    # Extract answer HTML from mammoth output by splitting at question
-    # boundaries
-    for pair in qa_pairs:
-        q_text = pair['question']
-        # Find question in mammoth HTML
-        idx = mammoth_html.find(q_text)
-        if idx < 0:
-            # Try with first 40 chars
-            idx = mammoth_html.find(q_text[:40])
-        if idx >= 0:
-            # Answer starts after the question's closing tag
-            after = mammoth_html[idx + len(q_text):]
-            # Find closing </p> of question paragraph
-            close_p = after.find('</p>')
-            if close_p >= 0:
-                answer_start = close_p + 4
-                answer_html = after[answer_start:]
-                # Trim at next question or attribution
-                for next_pair in qa_pairs:
-                    if next_pair is pair:
-                        continue
-                    next_idx = answer_html.find(next_pair['question'][:40])
-                    if next_idx >= 0:
-                        # Walk back to find opening <p
-                        cut = answer_html.rfind('<p', 0, next_idx)
-                        if cut >= 0:
-                            answer_html = answer_html[:cut]
-                        break
-                # Also trim at attribution
-                attr_idx = answer_html.lower().find(
-                    "today\u2019s answers come from",
-                )
-                if attr_idx < 0:
-                    attr_idx = answer_html.lower().find(
-                        "today's answers come from",
-                    )
-                if attr_idx >= 0:
-                    cut = answer_html.rfind('<p', 0, attr_idx)
-                    if cut >= 0:
-                        answer_html = answer_html[:cut]
-                pair['answer_html'] = answer_html.strip()
 
     return {
         'title': title,
         'age_text': age_text,
         'intro_text': ' '.join(intro_lines),
-        'qa_pairs': qa_pairs,
-        'qa_author_line': qa_author_line,
+        'article_urls': article_urls,
     }
 
 

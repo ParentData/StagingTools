@@ -654,7 +654,32 @@ def _process_docx(tmp_path: str, template_type: str = 'standard') -> dict:
 
     if template_type == 'baby_qa':
         from docx_parser import parse_baby_qa_docx
-        return parse_baby_qa_docx(tmp_path)
+        from wp_fetcher import fetch_wp_article
+        from claude_client import extract_qa_content
+
+        parsed = parse_baby_qa_docx(tmp_path)
+        urls = parsed.get('article_urls', [])
+
+        if len(urls) < 2:
+            return jsonify({'error': 'Need at least 2 article URLs in the Google Doc'}), 400
+
+        article1 = fetch_wp_article(urls[0])
+        article2 = fetch_wp_article(urls[1])
+        qa1 = extract_qa_content(article1['content_html'])
+        qa2 = extract_qa_content(article2['content_html'])
+
+        author1 = _strip_name_credentials(article1.get('author_name', ''))
+        author2 = _strip_name_credentials(article2.get('author_name', ''))
+        qa_authors = list(dict.fromkeys(a for a in [author1, author2] if a))
+
+        return {
+            'title': parsed.get('title', ''),
+            'age_text': parsed.get('age_text', ''),
+            'intro_text': parsed.get('intro_text', ''),
+            'qa1': qa1,
+            'qa2': qa2,
+            'qa_authors': qa_authors,
+        }
 
     from claude_client import extract_fields
     fields = extract_fields(parsed['raw_text'], parsed['mammoth_html'], template_type)

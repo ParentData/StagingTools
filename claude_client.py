@@ -45,7 +45,7 @@ Signature line "—Emily":
 
 Inline image within article body (chart, figure, illustrative image mid-article):
   <div style="width: 100%; margin: 0 0 24px 0;"><img src="..." alt="..." style="display: block; width: 100%; max-width: 552px; height: auto; margin: 0 auto;"></div>
-  If the image has a caption, add it as a regular paragraph immediately after the div.
+  Do NOT include image captions, photo credits, or attribution text (e.g. "Getty", "iStock", "Photo by…"). Strip them entirely.
 
 Bottom line list (fertility template only):
   <ul style="margin: 0; font-family: 'DM Sans', Arial, Helvetica, sans-serif; font-weight: normal; font-size: 16px; line-height: 26px; color: #000000; padding-left: 16px;">
@@ -77,7 +77,7 @@ Welcome/intro section paragraphs:
 
 Inline image within article body (chart, figure, illustrative image mid-article):
   <div style="width: 100%; margin: 0 0 24px 0;"><img src="..." alt="..." style="display: block; width: 100%; max-width: 552px; height: auto; margin: 0 auto;"></div>
-  If the image has a caption, add it as a regular paragraph immediately after the div.
+  Do NOT include image captions, photo credits, or attribution text (e.g. "Getty", "iStock", "Photo by…"). Strip them entirely.
 
 Bottom line list (fertility template only):
   <ul style="margin: 0; font-family: 'DM Sans', Arial, Helvetica, sans-serif; font-weight: normal; font-size: 16px; line-height: 26px; color: #000000; padding-left: 16px;">
@@ -239,6 +239,8 @@ def _strip_wp_bloat(html: str) -> str:
         r'<div[^>]*class="wp-block-buttons[^"]*"[^>]*>.*?</div>\s*</div>',
         '', html, flags=re.S
     )
+    # Remove figcaption elements (photo credits like "Getty", "iStock", etc.)
+    html = re.sub(r'<figcaption[^>]*>.*?</figcaption>', '', html, flags=re.S)
     # Remove WordPress Gutenberg block comments (<!-- wp:xxx --> / <!-- /wp:xxx -->)
     html = re.sub(r'<!--\s*/?wp:[^>]*-->', '', html)
     # Remove id="bottom-line" anchors from body elements — these are WP jump-link
@@ -310,6 +312,7 @@ Convert the WordPress HTML to email-ready HTML. Return a single JSON object with
   - Remove WordPress-only elements like share buttons, author bio boxes, comment sections.
   - Do NOT include any standalone hero or featured image at the very top of the content — it is placed in the template separately.
   - Preserve ALL other images that appear within the article body (charts, diagrams, figures, illustrative images). Apply the inline image style from the Style Guide to each one.
+  - Do NOT include any image captions, photo credits, or source attribution text (e.g. "Getty", "iStock", "Shutterstock", "Photo by…"). Remove them completely.
 
 {bottom_line_instruction}
 
