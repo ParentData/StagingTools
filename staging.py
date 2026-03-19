@@ -377,8 +377,8 @@ def _process_docx(tmp_path: str, template_type: str = 'standard') -> dict:
         # Website-only: return metadata + body for WordPress push (no email)
         staging = parsed.get('staging_instructions', {})
 
-        # Strip metadata header lines from mammoth HTML so only article body remains
-        body_html = _strip_metadata_from_html(parsed['mammoth_html'])
+        # Strip metadata header lines AND intro (everything up to first <hr>)
+        body_html = _strip_metadata_and_intro(parsed['mammoth_html'])
 
         return {
             'title':              parsed['detected_title'],
@@ -813,6 +813,47 @@ def _strip_featured_image(content_html: str, featured_image_url: str) -> str:
     return str(soup)
 
 
+def _strip_metadata_and_intro(html: str) -> str:
+    """Remove metadata lines AND the intro section from mammoth HTML.
+
+    Standard docs have: metadata lines → intro paragraphs → [LINE] → article.
+    This strips everything up to and including the [LINE] marker (which
+    appears as <p>[LINE]</p> in mammoth HTML) or <hr>.
+    """
+    from bs4 import BeautifulSoup as _BS
+
+    soup = _BS(html, 'html.parser')
+
+    # Find the [LINE] marker or <hr> — everything before it is metadata + intro
+    divider = soup.find('hr')
+    if not divider:
+        for p in soup.find_all('p'):
+            if p.get_text(strip=True) == '[LINE]':
+                divider = p
+                break
+
+    if divider:
+        # Remove all elements before and including the divider
+        for el in list(divider.previous_siblings):
+            if hasattr(el, 'decompose'):
+                el.decompose()
+            else:
+                el.extract()
+        divider.decompose()
+    else:
+        # No divider found — fall back to just stripping metadata lines
+        for el in list(soup.children):
+            if getattr(el, 'name', None) != 'p':
+                break
+            text = el.get_text(strip=True)
+            if not text or _METADATA_LINE_RE.match(text):
+                el.decompose()
+            else:
+                break
+
+    return str(soup).strip()
+
+
 def _strip_metadata_from_html(html: str) -> str:
     """Remove leading metadata paragraphs (Title:, Subtitle:, Author:, etc.) from mammoth HTML.
 
@@ -962,8 +1003,14 @@ def wp_draft():
         return jsonify({'error': 'No JSON body received'}), 400
 
     try:
+        wo_mode = data.get('wo_mode', '')
         original_url = data.get('original_url', '').strip()
-        if original_url:
+
+        if wo_mode == 'partial':
+            # Partial restage: only update the post content (text)
+            from wp_client import partial_restage
+            result = partial_restage(data)
+        elif original_url:
             from wp_client import publish_or_update
             result = publish_or_update(data)
         else:

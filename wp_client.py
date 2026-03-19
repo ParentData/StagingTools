@@ -674,6 +674,62 @@ def publish_draft(fields: dict) -> dict:
     return _create_draft_from_prepared(prepared)
 
 
+def partial_restage(fields: dict) -> dict:
+    """Update only the text content of an existing post.
+
+    Skips image upload, SEO, author, tags — just replaces the Gutenberg
+    block content.  Preserves existing inline images/graphs from the
+    current post by extracting their URLs and re-inserting them at
+    [[GRAPH_N]] placeholder positions.
+    """
+    original_url = fields.get('original_url', '').strip()
+    if not original_url:
+        raise ValueError('Original URL is required for partial restage')
+
+    post_id = resolve_post_id(original_url)
+    if not post_id:
+        raise ValueError(f'Could not find post for URL: {original_url}')
+
+    # Fetch existing post content to extract current graph/image URLs
+    existing_graphs = _extract_graphs_from_post(post_id)
+    print(f'[wp_client] partial_restage: found {len(existing_graphs)} existing graphs')
+
+    body_html = fields.get('article_body_html', '')
+    content = strip_email_styles(body_html, graphs=existing_graphs)
+    if not content.strip():
+        raise ValueError('No article body to publish')
+
+    return update_post(post_id, content=content)
+
+
+def _extract_graphs_from_post(post_id: int) -> list:
+    """Fetch an existing post and extract inline image URLs (graphs/charts).
+
+    Returns a list of {url, alt} dicts matching the format expected by
+    strip_email_styles, ordered by appearance in the post content.
+    Skips the featured image and CTA block images.
+    """
+    resp = _session.get(
+        f'{WP_API}/posts/{post_id}',
+        params={'_fields': 'content'},
+        auth=_wp_auth(),
+        timeout=15,
+    )
+    resp.raise_for_status()
+    content_html = resp.json().get('content', {}).get('rendered', '')
+
+    soup = BeautifulSoup(content_html, 'html.parser')
+    graphs = []
+    for img in soup.find_all('img'):
+        src = img.get('src', '')
+        alt = img.get('alt', '')
+        # Skip small images (logos, icons) and the featured image (usually first)
+        if not src or 'logo' in src.lower():
+            continue
+        graphs.append({'url': src, 'alt': alt})
+    return graphs
+
+
 def _create_draft_from_prepared(prepared: dict) -> dict:
     """Create a WordPress draft from a _prepare_post_fields result."""
     wp_meta = prepared['wp_meta']

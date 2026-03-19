@@ -20,39 +20,52 @@
     <h2>Choose Template</h2>
     <div class="field-group" style="margin-bottom:0;">
       <select id="template-select" onchange="selectTemplate(this.value)">
-        <optgroup label="Latest">
+        <optgroup label="Weekly Emails">
           <option value="standard" selected>Latest</option>
           <option value="latest_teaser">Latest Teaser</option>
+          <option value="free_digest">Free Digest</option>
+          <option value="paid_digest">Paid Digest</option>
+        </optgroup>
+        <optgroup label="Marketing">
+          <option value="marketing">Full Article Send</option>
+          <option value="marketing_flex">Flex</option>
+          <option value="simple">Simple Email</option>
         </optgroup>
         <optgroup label="Fertility">
-          <option value="fertility">Fertility Article</option>
-          <option value="fertility_digest">Fertility Digest</option>
-          <option value="qa">Fertility Q&amp;A</option>
+          <option value="fertility">Article</option>
+          <option value="fertility_digest">Digest</option>
+          <option value="qa">Q&amp;A</option>
         </optgroup>
         <optgroup label="Pregnancy">
-          <option value="pregnant_article">Pregnancy Article</option>
-          <option value="pregnant_qa">Pregnancy Q&amp;A</option>
+          <option value="pregnant_article">Article</option>
+          <option value="pregnant_qa">Q&amp;A</option>
         </optgroup>
         <optgroup label="Toddler">
-          <option value="toddler_article">Toddler Article</option>
-          <option value="toddler_digest">Toddler Digest</option>
-          <option value="toddler_qa">Toddler Q&amp;A</option>
+          <option value="toddler_article">Article</option>
+          <option value="toddler_digest">Digest</option>
+          <option value="toddler_qa">Q&amp;A</option>
         </optgroup>
         <optgroup label="Baby">
           <option value="baby_send_a">Newborn Send A</option>
           <option value="baby_send_b">Newborn Send B</option>
-          <option value="baby_article">Baby Article</option>
-          <option value="baby_qa">Baby Q&amp;A</option>
+          <option value="baby_article">Article</option>
+          <option value="baby_qa">Q&amp;A</option>
         </optgroup>
-        <optgroup label="Other">
-          <option value="marketing">Marketing - Full Article Send</option>
-          <option value="paid_digest">Paid Digest</option>
-          <option value="free_digest">Free Digest</option>
-          <option value="simple">Simple Email</option>
-          <option value="marketing_flex">Marketing - Flex</option>
+        <optgroup label="Website">
           <option value="website_only">Website Only</option>
         </optgroup>
       </select>
+    </div>
+
+    <!-- Website Only mode selector -->
+    <div id="wo-mode-selector" class="field-group" style="display:none; margin-top:12px;">
+      <label style="font-weight:600;">Staging Mode</label>
+      <div style="display:flex; gap:16px; margin-top:4px;">
+        <label><input type="radio" name="wo-mode" value="new" checked onchange="updateWoMode()"> New Article</label>
+        <label><input type="radio" name="wo-mode" value="total" onchange="updateWoMode()"> Total Restage</label>
+        <label><input type="radio" name="wo-mode" value="partial" onchange="updateWoMode()"> Partial Restage</label>
+      </div>
+      <p class="hint" id="wo-mode-hint">Create a brand-new WordPress draft from a doc.</p>
     </div>
   </section>
 
@@ -858,57 +871,59 @@
   <section id="section-website-only" class="card" hidden>
     <h2>2. Review Website Fields</h2>
 
-    <div class="field-group">
-      <label for="wo-title">Title</label>
-      <input type="text" id="wo-title" placeholder="Article title">
-    </div>
-
-    <div class="field-group">
-      <label for="wo-subtitle">Subtitle</label>
-      <input type="text" id="wo-subtitle" placeholder="Article subtitle">
-    </div>
-
-    <div class="field-group">
-      <label for="wo-author-name">Author Name</label>
-      <input type="text" id="wo-author-name" placeholder="e.g. Emily Oster">
-    </div>
-
-    <div class="field-group">
-      <label for="wo-author-title">Author Title / Credential</label>
-      <input type="text" id="wo-author-title" placeholder="e.g. PhD">
-    </div>
-
-    <div class="field-group">
-      <label for="wo-tags">Topic Tags</label>
-      <input type="text" id="wo-tags" placeholder="Health and Wellness, Cancer">
-      <p class="hint">Comma-separated.</p>
-    </div>
-
-    <div class="field-group">
-      <label for="wo-age-groups">Age Groups</label>
-      <input type="text" id="wo-age-groups" placeholder="Pregnancy, Baby">
-      <p class="hint">Comma-separated.</p>
-    </div>
-
-    <div class="field-group">
-      <label for="wo-photo-credit">Photo Credit</label>
-      <input type="text" id="wo-photo-credit" placeholder="e.g. Getty Images">
-    </div>
-
-    <div class="field-group">
-      <label for="wo-original-url">Original URL <span class="field-note">— if updating an existing post</span></label>
+    <div id="wo-original-url-group" class="field-group" style="display:none;">
+      <label for="wo-original-url">Original URL <span class="required">*</span></label>
       <input type="url" id="wo-original-url" placeholder="https://parentdata.org/existing-article/">
-      <p class="hint">Leave blank to create a new draft instead of updating.</p>
+      <p class="hint">The existing post to replace.</p>
     </div>
 
-    <div class="field-group image-url-field">
-      <label for="wo-img-url">Featured Image URL <span class="required">*</span></label>
-      <input type="url" id="wo-img-url" placeholder="https://parentdata.org/wp-content/uploads/…">
-    </div>
+    <div id="wo-full-fields">
+      <div class="field-group">
+        <label for="wo-title">Title</label>
+        <input type="text" id="wo-title" placeholder="Article title">
+      </div>
 
-    <div class="field-group">
-      <label for="wo-img-alt">Featured Image Alt Text</label>
-      <input type="text" id="wo-img-alt" placeholder="Brief description of the image">
+      <div class="field-group">
+        <label for="wo-subtitle">Subtitle</label>
+        <input type="text" id="wo-subtitle" placeholder="Article subtitle">
+      </div>
+
+      <div class="field-group">
+        <label for="wo-author-name">Author Name</label>
+        <input type="text" id="wo-author-name" placeholder="e.g. Emily Oster">
+      </div>
+
+      <div class="field-group">
+        <label for="wo-author-title">Author Title / Credential</label>
+        <input type="text" id="wo-author-title" placeholder="e.g. PhD">
+      </div>
+
+      <div class="field-group">
+        <label for="wo-tags">Topic Tags</label>
+        <input type="text" id="wo-tags" placeholder="Health and Wellness, Cancer">
+        <p class="hint">Comma-separated.</p>
+      </div>
+
+      <div class="field-group">
+        <label for="wo-age-groups">Age Groups</label>
+        <input type="text" id="wo-age-groups" placeholder="Pregnancy, Baby">
+        <p class="hint">Comma-separated.</p>
+      </div>
+
+      <div class="field-group">
+        <label for="wo-photo-credit">Photo Credit</label>
+        <input type="text" id="wo-photo-credit" placeholder="e.g. Getty Images">
+      </div>
+
+      <div class="field-group image-url-field">
+        <label for="wo-img-url">Featured Image URL <span class="required">*</span></label>
+        <input type="url" id="wo-img-url" placeholder="https://parentdata.org/wp-content/uploads/…">
+      </div>
+
+      <div class="field-group">
+        <label for="wo-img-alt">Featured Image Alt Text</label>
+        <input type="text" id="wo-img-alt" placeholder="Brief description of the image">
+      </div>
     </div>
   </section>
 
@@ -931,7 +946,7 @@
 
   <!-- ── Generate ─────────────────────────────────────────────────────── -->
   <section id="section-generate" class="card" hidden>
-    <h2>Generate Email</h2>
+    <h2 id="generate-heading">Generate Email</h2>
     <div id="group-update-banner" style="display:none; margin-bottom:14px;">
       <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
         <input type="checkbox" id="cb-update-banner">
@@ -971,6 +986,7 @@ let uploadedArticleUrl = '';
 let uploadedPhotoCredit = '';
 let uploadedAgeGroups = [];
 let uploadedPowerKeywords = [];
+let woMode = 'new';  // 'new', 'total', 'partial'
 let ltArticleBodyHtml = '';
 let _paidDigestStructure = [];  // [{articleCount: N}, ...] — tracks how many articles per section
 const LT_DEFAULT_INTRO = "Welcome to The Latest, where I break down current research and headlines in pregnancy, parenting, and personal health. If you\u2019ve seen a recent headline (parenting or otherwise) that you\u2019d like me to cover here, let me know by sharing your questions.\n\nDid you know that ParentData offers customized weekly newsletters tailored to your exact life stage \u2014 from trying to conceive through toddlerhood? That means the data and guidance you\u2019re getting is always relevant to where you are right now.";
@@ -981,10 +997,12 @@ function selectTemplate(type) {
 
   const isQA = type === 'qa';
   const isPregnantQA = type === 'pregnant_qa';
+  const isWebsiteOnly = type === 'website_only';
   const hasOwnUploadArea = isQA || isPregnantQA;
   document.getElementById('standard-upload-area').style.display = hasOwnUploadArea ? 'none' : '';
   document.getElementById('qa-upload-area').style.display = isQA ? '' : 'none';
   document.getElementById('pregnant-qa-upload-area').style.display = isPregnantQA ? '' : 'none';
+  document.getElementById('wo-mode-selector').style.display = isWebsiteOnly ? '' : 'none';
 
   if (!hasOwnUploadArea) {
     // Per-template input visibility:
@@ -1123,6 +1141,7 @@ function _showPostUploadSections(type) {
   if (!isWebsiteOnly) {
     document.getElementById('section-wo-graphs').style.display = 'none';
   }
+  if (isWebsiteOnly) _applyWoMode();
 
   // Always show generate
   const genSection = document.getElementById('section-generate');
@@ -1137,14 +1156,16 @@ function _showPostUploadSections(type) {
   // Fertility/QA-only option in generate section
   setHide('group-update-banner', !(isFertility || isQA));
 
-  // Website Only: change generate button text, hide email-specific results
+  // Website Only: change button text, hide email-specific results and extra WP buttons
   const genBtn = document.getElementById('generate-btn');
   if (isWebsiteOnly) {
-    genBtn.textContent = 'Stage to WordPress';
+    genBtn.textContent = 'Generate Post';
+    document.getElementById('generate-heading').textContent = 'Generate Post';
     document.getElementById('result-links').setAttribute('hidden', '');
     document.getElementById('wp-draft-area').setAttribute('hidden', '');
   } else {
     genBtn.textContent = 'Generate Staged Email';
+    document.getElementById('generate-heading').textContent = 'Generate Email';
   }
 }
 
@@ -1726,6 +1747,13 @@ function populateWebsiteOnlyFields(data) {
   document.getElementById('wo-img-url').value = data.featured_image_url || '';
   document.getElementById('wo-img-alt').value = data.featured_image_alt || '';
   document.getElementById('wo-body').value = data.article_body_html || '';
+  uploadedPowerKeywords = data.power_keywords || [];
+
+  // If doc has an original_url, auto-switch to total restage mode
+  if (data.original_url) {
+    document.querySelector('input[name="wo-mode"][value="total"]').checked = true;
+    updateWoMode();
+  }
 
   if (data.graph_count > 0) {
     buildGraphFields(data.graph_count, data.inline_graphs || [], 'wo-graph');
@@ -1734,6 +1762,8 @@ function populateWebsiteOnlyFields(data) {
   } else {
     document.getElementById('section-wo-graphs').style.display = 'none';
   }
+
+  _applyWoMode();
 }
 
 function populateDigestFields(data) {
@@ -2325,38 +2355,87 @@ async function generateEmail() {
   }
 }
 
+// ── Website Only: Mode selector ──────────────────────────────────────────────
+function updateWoMode() {
+  woMode = document.querySelector('input[name="wo-mode"]:checked').value;
+  const hints = {
+    new: 'Create a brand-new WordPress draft from a doc.',
+    total: 'Replace an existing post entirely — text, images, SEO, author.',
+    partial: 'Replace only the text of an existing post. Images, SEO, and author stay the same.',
+  };
+  document.getElementById('wo-mode-hint').textContent = hints[woMode];
+  _applyWoMode();
+}
+
+function _applyWoMode() {
+  const showUrl = woMode === 'total' || woMode === 'partial';
+  const showFull = woMode !== 'partial';
+  document.getElementById('wo-original-url-group').style.display = showUrl ? '' : 'none';
+  document.getElementById('wo-full-fields').style.display = showFull ? '' : 'none';
+  // Only show graphs section if there are graph fields AND not partial mode
+  const hasGraphs = document.getElementById('wo-graph-fields').children.length > 0;
+  document.getElementById('section-wo-graphs').style.display = (showFull && hasGraphs) ? '' : 'none';
+}
+
 // ── Website Only: Stage to WordPress ─────────────────────────────────────────
 async function stageToWordPress() {
   showStatus('generate-status', 'Pushing to WordPress… this may take 15–30 seconds.', 'info');
   document.getElementById('result-links').setAttribute('hidden', '');
 
-  const topicTags = document.getElementById('wo-tags').value
-    .split(',').map(s => s.trim()).filter(Boolean);
-  const ageGroups = document.getElementById('wo-age-groups').value
-    .split(',').map(s => s.trim()).filter(Boolean);
+  let payload;
 
-  const inlineGraphs = [];
-  let gi = 1;
-  while (document.getElementById(`wo-graph-${gi}-url`)) {
-    inlineGraphs.push({
-      url: document.getElementById(`wo-graph-${gi}-url`).value,
-      alt: document.getElementById(`wo-graph-${gi}-alt`).value,
-    });
-    gi++;
+  if (woMode === 'partial') {
+    // Partial restage: only send original_url + article body
+    const originalUrl = document.getElementById('wo-original-url').value.trim();
+    if (!originalUrl) {
+      showStatus('generate-status', 'Error: Original URL is required for partial restage.', 'error');
+      return;
+    }
+    payload = {
+      wo_mode: 'partial',
+      original_url: originalUrl,
+      article_body_html: document.getElementById('wo-body').value,
+    };
+  } else {
+    // New article or total restage: send all fields
+    const topicTags = document.getElementById('wo-tags').value
+      .split(',').map(s => s.trim()).filter(Boolean);
+    const ageGroups = document.getElementById('wo-age-groups').value
+      .split(',').map(s => s.trim()).filter(Boolean);
+
+    const inlineGraphs = [];
+    let gi = 1;
+    while (document.getElementById(`wo-graph-${gi}-url`)) {
+      inlineGraphs.push({
+        url: document.getElementById(`wo-graph-${gi}-url`).value,
+        alt: document.getElementById(`wo-graph-${gi}-alt`).value,
+      });
+      gi++;
+    }
+
+    payload = {
+      wo_mode: woMode,
+      title: document.getElementById('wo-title').value,
+      article_body_html: document.getElementById('wo-body').value,
+      featured_image_url: document.getElementById('wo-img-url').value,
+      featured_image_alt: document.getElementById('wo-img-alt').value,
+      photo_credit: document.getElementById('wo-photo-credit').value,
+      author_name: document.getElementById('wo-author-name').value,
+      topic_tags: topicTags,
+      age_groups: ageGroups,
+      original_url: woMode === 'total' ? document.getElementById('wo-original-url').value : '',
+      inline_graphs: inlineGraphs,
+      power_keywords: uploadedPowerKeywords,
+    };
+
+    if (woMode === 'total') {
+      const originalUrl = document.getElementById('wo-original-url').value.trim();
+      if (!originalUrl) {
+        showStatus('generate-status', 'Error: Original URL is required for total restage.', 'error');
+        return;
+      }
+    }
   }
-
-  const payload = {
-    title: document.getElementById('wo-title').value,
-    article_body_html: document.getElementById('wo-body').value,
-    featured_image_url: document.getElementById('wo-img-url').value,
-    featured_image_alt: document.getElementById('wo-img-alt').value,
-    photo_credit: document.getElementById('wo-photo-credit').value,
-    author_name: document.getElementById('wo-author-name').value,
-    topic_tags: topicTags,
-    age_groups: ageGroups,
-    original_url: document.getElementById('wo-original-url').value,
-    inline_graphs: inlineGraphs,
-  };
 
   try {
     const resp = await fetch('/wp-draft', {
@@ -2371,15 +2450,15 @@ async function stageToWordPress() {
       return;
     }
 
-    const action = payload.original_url ? 'updated' : 'created as draft';
-    showStatus('generate-status', `Post ${action} successfully!`, 'success');
+    const actions = { new: 'created as draft', total: 'fully restaged', partial: 'text updated' };
+    showStatus('generate-status', `Post ${actions[woMode]} successfully!`, 'success');
 
-    // Show WP links
-    const wpResult = document.getElementById('wp-draft-result');
+    // Show just the "Open Draft in WordPress" link
     document.getElementById('wp-draft-link').href = data.edit_url || '#';
-    wpResult.removeAttribute('hidden');
+    document.getElementById('wp-draft-result').removeAttribute('hidden');
     document.getElementById('wp-draft-area').removeAttribute('hidden');
-    document.getElementById('wp-draft-status').setAttribute('hidden', '');
+    // Hide the extra WP buttons (Create Draft, Copy WP HTML, Preview) — not needed here
+    document.getElementById('wp-draft-area').querySelectorAll('button').forEach(b => b.style.display = 'none');
   } catch (err) {
     showStatus('generate-status', `Network error: ${err.message}`, 'error');
   }
