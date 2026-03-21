@@ -1384,9 +1384,20 @@ def _inject_baby_article(soup, fields):
     _update_baby_banner(soup, fields)
     _update_headline(soup, fields)
     _update_baby_subtitle_author(soup, fields)
+    _update_baby_featured_image(soup, fields)
     _update_baby_bottom_line(soup, fields)
     _replace_baby_article_body(soup, fields)
     _update_copyright(soup)
+
+
+def _update_baby_featured_image(soup, fields):
+    """Set the featured image src in the baby article template."""
+    img_url = fields.get('featured_image_url', '')
+    img_alt = _escape_attr(fields.get('featured_image_alt', ''))
+    img = soup.find('img', attrs={'alt': 'Article Image'})
+    if img and img_url:
+        img['src'] = img_url
+        img['alt'] = img_alt
 
 
 def _update_baby_subtitle_author(soup, fields):
@@ -2982,3 +2993,53 @@ def _fix_iterable_heights(html: str) -> str:
         return pre + style + post
 
     return pattern.sub(replace_heights, html)
+
+
+# ── Replace header and footer ────────────────────────────────────────────────
+
+def replace_header_footer(html: str) -> str:
+    """Replace the header (first <tr>) and footer (last <tr>) of any email
+    HTML with the header and footer from the Latest template."""
+    from pathlib import Path
+
+    template_path = Path(__file__).parent / 'email_templates' / 'latest_template.html'
+    with open(template_path, encoding='utf-8') as f:
+        latest_soup = BeautifulSoup(f.read(), 'html.parser')
+
+    # Find the main tbody in the Latest template
+    latest_table = latest_soup.find('table', class_='email-container')
+    if not latest_table:
+        raise ValueError('Could not find email-container table in Latest template')
+    latest_tbody = latest_table.find('tbody')
+    if not latest_tbody:
+        raise ValueError('Could not find tbody in Latest template')
+
+    latest_trs = latest_tbody.find_all('tr', recursive=False)
+    if len(latest_trs) < 2:
+        raise ValueError('Latest template has fewer than 2 top-level trs')
+
+    latest_header_tr = latest_trs[0]
+    latest_footer_tr = latest_trs[-1]
+
+    # Parse the input HTML
+    soup = BeautifulSoup(html, 'html.parser')
+    input_table = soup.find('table', class_='email-container')
+    if not input_table:
+        raise ValueError('Could not find email-container table in input HTML')
+    input_tbody = input_table.find('tbody')
+    if not input_tbody:
+        raise ValueError('Could not find tbody in input HTML')
+
+    input_trs = input_tbody.find_all('tr', recursive=False)
+    if len(input_trs) < 2:
+        raise ValueError('Input HTML has fewer than 2 top-level trs')
+
+    # Replace header (first tr)
+    import copy
+    input_trs[0].replace_with(copy.copy(latest_header_tr))
+
+    # Replace footer (last tr) — re-find after the header swap
+    input_trs = input_tbody.find_all('tr', recursive=False)
+    input_trs[-1].replace_with(copy.copy(latest_footer_tr))
+
+    return str(soup)
