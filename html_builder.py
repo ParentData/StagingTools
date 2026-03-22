@@ -467,39 +467,57 @@ def _inject_teaser_body(soup, fields):
     visible_blocks = list(blocks[:fade_idx])
     faded_blocks = blocks[fade_idx:]
 
-    # Strip image-only blocks that appear before the first <h2>.
-    # WordPress often places an editorial/secondary image near the top of the
-    # article body.  Since we inject the featured image before the H2 ourselves,
-    # any existing pre-H2 image would create a duplicate.  Graphs and figures
-    # that appear AFTER the H2 are left untouched.
-    clean_visible = []
-    h2_found = False
+    # Count pre-H2 image blocks.  If the article has multiple images before
+    # the first heading (e.g. graph/chart articles), keep them as-is and skip
+    # the featured image.  If there's only a single pre-H2 image (the
+    # WordPress editorial duplicate of the featured image), strip it and
+    # insert the featured image instead.
+    pre_h2_images = []
     for el in visible_blocks:
         if el.name and el.name.lower() == 'h2':
-            h2_found = True
-        if not h2_found and _is_image_only_block(el):
-            continue
-        clean_visible.append(el)
-    visible_blocks = clean_visible
+            break
+        if _is_image_only_block(el):
+            pre_h2_images.append(el)
 
-    # Insert featured image before the first <h2> in visible blocks; append if none
-    if img_url:
-        img_el = BeautifulSoup(
-            f'<div style="position: relative; display: inline-block; width: 100%; margin-bottom: 24px;">'
-            f'<img alt="{img_alt}" class="fluid"'
-            f' src="{img_url}"'
-            f' style="width: 100%; max-width: 552px; height: auto; display: block; border-radius: 16px;">'
-            f'</div>',
-            'html.parser',
-        ).find('div')
-        img_inserted = False
-        for i, el in enumerate(visible_blocks):
+    use_inline_images = len(pre_h2_images) > 1  # multiple graphs/charts
+
+    if not use_inline_images:
+        # Strip the single pre-H2 editorial image (duplicate of featured)
+        clean_visible = []
+        h2_found = False
+        for el in visible_blocks:
             if el.name and el.name.lower() == 'h2':
-                visible_blocks.insert(i, img_el)
-                img_inserted = True
-                break
-        if not img_inserted:
-            visible_blocks.append(img_el)
+                h2_found = True
+            if not h2_found and _is_image_only_block(el):
+                continue
+            clean_visible.append(el)
+        visible_blocks = clean_visible
+
+        # Insert featured image before the first <h2>
+        if img_url:
+            img_el = BeautifulSoup(
+                f'<div style="position: relative; display: inline-block; width: 100%; margin-bottom: 24px;">'
+                f'<img alt="{img_alt}" class="fluid"'
+                f' src="{img_url}"'
+                f' style="width: 100%; max-width: 552px; height: auto; display: block; border-radius: 16px;">'
+                f'</div>',
+                'html.parser',
+            ).find('div')
+            img_inserted = False
+            for i, el in enumerate(visible_blocks):
+                if el.name and el.name.lower() == 'h2':
+                    visible_blocks.insert(i, img_el)
+                    img_inserted = True
+                    break
+            if not img_inserted:
+                visible_blocks.append(img_el)
+    else:
+        # Multiple pre-H2 images (graphs/charts): style them consistently
+        for el in pre_h2_images:
+            img = el.find('img')
+            if img:
+                img['class'] = img.get('class', []) + ['fluid']
+                img['style'] = 'width: 100%; max-width: 552px; height: auto; display: block; margin-bottom: 16px;'
 
     # ── Capture DOM targets before any manipulation ───────────────────────────
     intro_p_tmpl = soup.find(
