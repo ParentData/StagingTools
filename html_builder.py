@@ -238,7 +238,7 @@ def _replace_article_sections(soup, fields):
             image_div = (
                 f'<div style="position: relative; display: inline-block; width: 100%; margin-bottom: 24px;">'
                 f'<img alt="{img_alt}" class="fluid"'
-                f' src="{img_url}"'
+                f' src="{img_url}" width="552" height="auto"'
                 f' style="width: 100%; max-width: 552px; height: auto; display: block; border-radius: 16px;">'
                 f'</div>'
             )
@@ -498,7 +498,7 @@ def _inject_teaser_body(soup, fields):
             img_el = BeautifulSoup(
                 f'<div style="position: relative; display: inline-block; width: 100%; margin-bottom: 24px;">'
                 f'<img alt="{img_alt}" class="fluid"'
-                f' src="{img_url}"'
+                f' src="{img_url}" width="552" height="auto"'
                 f' style="width: 100%; max-width: 552px; height: auto; display: block; border-radius: 16px;">'
                 f'</div>',
                 'html.parser',
@@ -2267,7 +2267,7 @@ def _replace_graph_placeholders(html: str, inline_graphs: list) -> str:
         alt = _escape_attr(graph.get('alt', f'Graph {n}'))
         return (
             f'<div style="position: relative; display: inline-block; width: 100%; margin: 16px 0;">'
-            f'<img alt="{alt}" class="fluid" src="{url}"'
+            f'<img alt="{alt}" class="fluid" src="{url}" width="552" height="auto"'
             f' style="width: 100%; max-width: 552px; height: auto; display: block;">'
             f'</div>'
         )
@@ -2602,6 +2602,29 @@ def apply_email_fixes(html: str) -> str:
                 img['style'] = 'display:block;margin:0 auto;' + style
         if not img.has_attr('alt'):
             img['alt'] = ''
+
+        # 5a. Ensure explicit width/height HTML attributes for email clients
+        #     that ignore CSS (notably Outlook).  Derive from inline style
+        #     when the attribute is missing or set to a percentage like "100%".
+        _style = img.get('style', '')
+        cur_w = img.get('width', '')
+        if not cur_w or cur_w.endswith('%'):
+            # Try max-width first (preferred fixed px), then width
+            mw = _re_fix.search(r'max-width\s*:\s*(\d+)\s*px', _style)
+            w = _re_fix.search(r'(?<!max-)width\s*:\s*(\d+)\s*px', _style)
+            if mw:
+                img['width'] = mw.group(1)
+            elif w:
+                img['width'] = w.group(1)
+
+        cur_h = img.get('height', '')
+        if not cur_h or cur_h.endswith('%'):
+            h = _re_fix.search(r'(?<!max-)height\s*:\s*(\d+)\s*px', _style)
+            if h:
+                img['height'] = h.group(1)
+            else:
+                # height:auto is common for fluid images — set attribute too
+                img['height'] = 'auto'
 
     # 6. Remove <script> and <iframe>
     for tag in soup.find_all(['script', 'iframe']):
@@ -3084,6 +3107,16 @@ def replace_header_footer(html: str, title: str = '', subtitle: str = '') -> str
                 )
                 sub_td.append(new_p)
             new_header.insert_after(hero)
+            insert_after = hero
+        else:
+            insert_after = new_header
+
+        # Add spacer row between header/hero and the article content
+        spacer = BeautifulSoup(
+            '<tr><td style="height:24px; font-size:0; line-height:0;">&nbsp;</td></tr>',
+            'html.parser',
+        ).find('tr')
+        insert_after.insert_after(spacer)
 
     # Replace footer: find the <tr> containing the Footer Logo
     input_footer_logo = soup.find('img', alt='Footer Logo')
