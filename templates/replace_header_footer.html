@@ -33,7 +33,18 @@
 <body>
 <main class="container" style="max-width: 1100px; margin: 0 auto; padding: 24px;">
   <h1>Replace Header &amp; Footer</h1>
-  <p style="color:#555; margin-bottom:16px;">Paste any email HTML on the left. The tool will replace the header and footer with the standard Latest (ParentData) versions.</p>
+  <p style="color:#555; margin-bottom:16px;">Paste any email HTML below. The tool will replace the header and footer with the standard Latest (ParentData) versions and add a title/subtitle.</p>
+
+  <div style="display:flex; gap:16px; margin-bottom:16px;">
+    <div style="flex:1;">
+      <label for="hf-title" style="font-weight:600; display:block; margin-bottom:4px;">Title</label>
+      <input type="text" id="hf-title" placeholder="Article title" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px;">
+    </div>
+    <div style="flex:1;">
+      <label for="hf-subtitle" style="font-weight:600; display:block; margin-bottom:4px;">Subtitle</label>
+      <input type="text" id="hf-subtitle" placeholder="Subtitle line (optional)" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px;">
+    </div>
+  </div>
 
   <div class="tool-grid">
     <div class="tool-col">
@@ -64,7 +75,11 @@ async function runReplace() {
     const resp = await fetch('/replace-hf', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ html: input }),
+      body: JSON.stringify({
+        html: input,
+        title: document.getElementById('hf-title').value,
+        subtitle: document.getElementById('hf-subtitle').value,
+      }),
     });
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({ error: resp.statusText }));

@@ -968,9 +968,13 @@ def replace_hf():
     if not raw_html.strip():
         return jsonify({'error': 'No HTML provided'}), 400
 
+    title = data.get('title', '')
+    subtitle = data.get('subtitle', '')
+
     try:
-        from html_builder import replace_header_footer
-        fixed = replace_header_footer(raw_html)
+        from html_builder import replace_header_footer, apply_email_fixes
+        fixed = replace_header_footer(raw_html, title=title, subtitle=subtitle)
+        fixed = apply_email_fixes(fixed)
         return Response(fixed, mimetype='text/html; charset=utf-8')
     except Exception as e:
         return jsonify({'error': str(e)}), 500

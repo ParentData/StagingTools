@@ -3015,9 +3015,10 @@ def _fix_iterable_heights(html: str) -> str:
 
 # ── Replace header and footer ────────────────────────────────────────────────
 
-def replace_header_footer(html: str) -> str:
+def replace_header_footer(html: str, title: str = '', subtitle: str = '') -> str:
     """Replace the header and footer of any ParentData email HTML with
-    the header and footer from the Latest template.
+    the header and footer from the Latest template, and inject a hero
+    section with title/subtitle after the header.
 
     Finds the header by the ParentData Logo image and the footer by the
     Footer Logo image, regardless of table nesting depth.
@@ -3029,12 +3030,16 @@ def replace_header_footer(html: str) -> str:
     with open(template_path, encoding='utf-8') as f:
         latest_soup = BeautifulSoup(f.read(), 'html.parser')
 
-    # Extract header and footer <tr>s from the Latest template
+    # Extract header <tr> from the Latest template
     latest_logo = latest_soup.find('img', alt='ParentData Logo')
     if not latest_logo:
         raise ValueError('Could not find ParentData Logo in Latest template')
     latest_header_tr = latest_logo.find_parent('tr')
 
+    # Extract hero <tr> (headline + subtitle) — it's the next <tr> sibling after the header
+    latest_hero_tr = latest_header_tr.find_next_sibling('tr')
+
+    # Extract footer <tr>
     latest_footer_logo = latest_soup.find('img', alt='Footer Logo')
     if not latest_footer_logo:
         raise ValueError('Could not find Footer Logo in Latest template')
@@ -3047,25 +3052,50 @@ def replace_header_footer(html: str) -> str:
     # Replace header: find the <tr> containing the logo image
     input_logo = soup.find('img', alt='ParentData Logo')
     if not input_logo:
-        # Try other common logo alt texts
         input_logo = soup.find('img', alt=re.compile(r'logo', re.I))
     if not input_logo:
         raise ValueError('Could not find a logo image in the input HTML')
     input_header_tr = input_logo.find_parent('tr')
     if input_header_tr:
-        input_header_tr.replace_with(copy.copy(latest_header_tr))
+        new_header = copy.copy(latest_header_tr)
+        input_header_tr.replace_with(new_header)
+
+        # Insert hero section (title + subtitle) right after the new header
+        if title and latest_hero_tr:
+            hero = copy.copy(latest_hero_tr)
+            # Set the title
+            h1 = hero.find('h1', class_='headline-mobile')
+            if h1:
+                h1.clear()
+                h1.append(NavigableString(title))
+            # Set the subtitle
+            sub_td = hero.find('td', string=None)
+            for p in hero.find_all('p', class_='sub-text'):
+                p.decompose()
+            if subtitle:
+                sub_container = hero.find('td', style=re.compile(r'padding-bottom'))
+                # Find the td that held the subtitles (second row td)
+                tds = hero.find_all('td')
+                sub_td = tds[-1] if len(tds) > 1 else tds[0]
+                new_p = BeautifulSoup(
+                    f'<p class="sub-text" style="margin: 0; font-family: \'DM Sans\', Arial, Helvetica, sans-serif; '
+                    f'font-weight: 400; font-size: 18px; line-height: 32px; color: #000000;">{subtitle}</p>',
+                    'html.parser',
+                )
+                sub_td.append(new_p)
+            new_header.insert_after(hero)
 
     # Replace footer: find the <tr> containing the Footer Logo
     input_footer_logo = soup.find('img', alt='Footer Logo')
     if not input_footer_logo:
         raise ValueError('Could not find Footer Logo in the input HTML')
-    input_footer_tr = input_footer_logo.find_parent('tr')
-    # Walk up to the <tr> that wraps the entire footer section (the one
-    # whose td directly contains the footer table with unsubscribe links)
     footer_td = input_footer_logo.find_parent('td', class_='table-box-mobile')
-    if footer_td:
-        input_footer_tr = footer_td.find_parent('tr')
+    input_footer_tr = footer_td.find_parent('tr') if footer_td else input_footer_logo.find_parent('tr')
     if input_footer_tr:
         input_footer_tr.replace_with(copy.copy(latest_footer_tr))
+
+    # Update the <title> tag
+    if title and soup.title:
+        soup.title.string = f'{title} - ParentData'
 
     return str(soup)
