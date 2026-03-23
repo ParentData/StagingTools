@@ -282,6 +282,70 @@ def parse_paid_digest_docx(file_path: str) -> dict:
     return {'sections': sections}
 
 
+def parse_marketing_digest_docx(file_path: str) -> dict:
+    """
+    Parse a marketing digest DOCX (exported from Google Doc).
+
+    Expected format:
+      <intro paragraphs>
+      https://parentdata.org/article-1
+      https://parentdata.org/article-2
+      ...
+
+    Everything before the first ParentData URL is treated as intro text
+    (converted to HTML via mammoth). All ParentData URLs are extracted
+    as article links.
+
+    Returns:
+        {
+            intro_html: str,
+            articles: [{url: str}, ...]
+        }
+    """
+    doc = Document(file_path)
+    url_re = re.compile(r'https?://(?:www\.)?parentdata\.org/\S+', re.I)
+
+    # Find the first paragraph that contains a URL
+    first_url_idx = None
+    for i, para in enumerate(doc.paragraphs):
+        if url_re.search(para.text.strip()):
+            first_url_idx = i
+            break
+
+    # Convert intro paragraphs (before first URL) to HTML via mammoth
+    intro_html = ''
+    if first_url_idx is not None and first_url_idx > 0:
+        with open(file_path, 'rb') as f:
+            mammoth_result = mammoth.convert_to_html(f)
+        # mammoth gives us the whole doc as HTML — we need just the intro.
+        # Parse and take paragraphs until we hit one containing a URL.
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(mammoth_result.value, 'html.parser')
+        intro_parts = []
+        skip_re = re.compile(r'^\s*intro\s*text\s*:?\s*$', re.I)
+        for el in soup.children:
+            text = el.get_text() if hasattr(el, 'get_text') else str(el)
+            if url_re.search(text):
+                break
+            # Skip heading-like "Intro Text" label
+            if skip_re.match(text.strip()):
+                continue
+            intro_parts.append(str(el))
+        intro_html = ''.join(intro_parts)
+
+    # Extract all URLs from the doc
+    articles = []
+    for para in doc.paragraphs:
+        text = para.text.strip()
+        if not text:
+            continue
+        m = url_re.search(text)
+        if m:
+            articles.append({'url': m.group(0).rstrip('.,;:')})
+
+    return {'intro_html': intro_html, 'articles': articles}
+
+
 def parse_toddler_article_docx(file_path: str) -> dict:
     """
     Parse a ToddlerData article DOCX (exported from Google Doc).
@@ -749,41 +813,60 @@ def parse_simple_docx(file_path: str) -> dict:
     Parse a "simple email" DOCX (exported from Google Doc).
 
     Expected document structure:
+      Title: …                   (optional)
+      Subtitle: …                (optional)
       <pre-button paragraphs>
-      BUTTON GOES HERE          (bold marker line)
+      BUTTON GOES HERE          (bold marker line — optional)
       <post-button paragraphs>
-      Button Information         (heading)
+      Button Information         (heading — optional)
       Text: <button label>
       Link: <button URL>
 
     Returns:
         {
+            title:            str,
+            subtitle:         str,
             pre_button_html:  str,
             post_button_html: str,
             button_text:      str,
             button_url:       str,
+            has_button:       bool,
         }
     """
     import io
 
     doc = Document(file_path)
 
-    # Walk paragraphs and split into three zones:
-    #   1) before "BUTTON GOES HERE"
-    #   2) after "BUTTON GOES HERE" but before "Button Information"
-    #   3) "Button Information" section (metadata)
+    title = ''
+    subtitle = ''
     pre_paras = []
     post_paras = []
     button_text = ''
     button_url = ''
+    has_button = False
 
     zone = 'pre'  # pre -> post -> info
     for para in doc.paragraphs:
         text = para.text.strip()
 
+        # Extract title/subtitle from any zone (usually at the top)
+        m_title = re.match(r'^Title\s*:\s*(.+)$', text, re.I)
+        m_subtitle = re.match(r'^Subtitle\s*:\s*(.+)$', text, re.I)
+        if m_title:
+            title = m_title.group(1).strip()
+            continue
+        if m_subtitle:
+            subtitle = m_subtitle.group(1).strip()
+            continue
+
         if zone == 'pre':
             if re.match(r'^BUTTON\s+GOES\s+HERE$', text, re.I):
+                has_button = True
                 zone = 'post'
+                continue
+            if re.match(r'^Button\s+Information$', text, re.I):
+                has_button = True
+                zone = 'info'
                 continue
             pre_paras.append(para)
 
@@ -802,22 +885,22 @@ def parse_simple_docx(file_path: str) -> dict:
                 button_url = m_link.group(1).strip()
 
     # Convert the pre/post paragraph ranges to HTML via mammoth.
-    # We use the full DOCX mammoth conversion, then extract by paragraph markers.
     with open(file_path, 'rb') as f:
         mammoth_result = mammoth.convert_to_html(f)
     full_html = mammoth_result.value
+
+    # Strip Title:/Subtitle: lines from HTML output
+    full_html = re.sub(
+        r'<p>\s*(?:Title|Subtitle)\s*:\s*[^<]*</p>', '', full_html, flags=re.I
+    )
 
     # Split the mammoth HTML at the "BUTTON GOES HERE" text
     marker_re = re.compile(r'BUTTON\s+GOES\s+HERE', re.I)
     btn_info_re = re.compile(r'Button\s+Information', re.I)
 
-    # Find the marker in the HTML and split around it
     marker_match = marker_re.search(full_html)
     if marker_match:
-        # Find the <p> tag containing the marker
-        # Walk backwards to find the opening <p
         start = full_html.rfind('<p', 0, marker_match.start())
-        # Walk forwards to find the closing </p>
         end = full_html.find('</p>', marker_match.end())
         if end != -1:
             end += len('</p>')
@@ -836,11 +919,21 @@ def parse_simple_docx(file_path: str) -> dict:
     else:
         post_html = remaining
 
+    # Also strip Button Information section from post_html
+    post_html = btn_info_re.split(post_html)[0].strip()
+    # Strip any trailing "Text: ..." or "Link: ..." paragraphs from post_html
+    post_html = re.sub(
+        r'<p>\s*(?:Text|Link)\s*:\s*[^<]*</p>\s*$', '', post_html, flags=re.I
+    ).strip()
+
     return {
+        'title': title,
+        'subtitle': subtitle,
         'pre_button_html': pre_html,
         'post_button_html': post_html,
         'button_text': button_text,
         'button_url': button_url,
+        'has_button': has_button,
     }
 
 

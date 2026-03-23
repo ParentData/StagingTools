@@ -144,9 +144,11 @@ def build_email_html(template_path: str, fields: dict, template_type: str = 'sta
     # Replace [[GRAPH_N]] placeholders with inline image blocks
     html = _replace_graph_placeholders(html, fields.get('inline_graphs', []))
 
-    # Marketing: swap header & footer to match the Latest template
-    if template_type in ('marketing', 'marketing_digest'):
-        html = replace_header_footer(html)
+    # Swap header & footer to match the Latest template
+    if template_type in ('marketing', 'marketing_digest', 'simple'):
+        title = fields.get('title', '')
+        subtitle = fields.get('subtitle', '')
+        html = replace_header_footer(html, title=title, subtitle=subtitle)
 
     # Run all email-checker auto-fixes so the output is already clean
     return apply_email_fixes(html)
@@ -1875,6 +1877,31 @@ def _inject_marketing_digest(soup, fields):
     """Inject article cards and optional promo banner into the marketing digest template."""
     _update_title(soup, fields)
 
+    # Intro section
+    intro_td = soup.find('td', class_='md-intro')
+    if intro_td:
+        intro_html = fields.get('intro_html', '')
+        if intro_html:
+            intro_td.clear()
+            intro_soup = BeautifulSoup(intro_html, 'html.parser')
+            # Apply inline styles to bare tags from mammoth
+            for p in intro_soup.find_all('p'):
+                if not p.get('style'):
+                    p['style'] = (
+                        "font-family: 'DM Sans', Arial, Helvetica, sans-serif; "
+                        "font-weight: normal; font-size: 16px; line-height: 160%; "
+                        "color: rgb(40, 40, 40); margin: 0 0 16px;"
+                    )
+            for a in intro_soup.find_all('a'):
+                if not a.get('style'):
+                    a['style'] = "color: #054F8B; text-decoration: underline;"
+            intro_td.append(intro_soup)
+        elif not intro_html.strip() if isinstance(intro_html, str) else True:
+            # No intro — remove the row
+            intro_tr = intro_td.find_parent('tr')
+            if intro_tr:
+                intro_tr.decompose()
+
     articles = fields.get('articles', [])
     card_count = int(fields.get('card_count', len(articles)))
 
@@ -2414,19 +2441,25 @@ def _inject_simple(soup, fields):
     pre_td = soup.find('td', class_='simple-pre-button')
     if pre_td:
         pre_html = fields.get('pre_button_html', '')
-        if pre_html:
-            pre_td.clear()
+        pre_td.clear()
+        if pre_html.strip():
             pre_td.append(BeautifulSoup(pre_html, 'html.parser'))
 
     # Post-button content
     post_td = soup.find('td', class_='simple-post-button')
     if post_td:
         post_html = fields.get('post_button_html', '')
-        if post_html:
+        if post_html.strip():
             post_td.clear()
             post_td.append(BeautifulSoup(post_html, 'html.parser'))
+        else:
+            # No post-button content — remove the row entirely
+            post_tr = post_td.find_parent('tr')
+            if post_tr:
+                post_tr.decompose()
+            post_td = None
 
-    # Mammoth outputs bare <p> and <a> tags — apply standard email inline styles
+    # Mammoth outputs bare tags — apply standard email inline styles
     for td in [pre_td, post_td]:
         if not td:
             continue
@@ -2436,10 +2469,21 @@ def _inject_simple(soup, fields):
         for a in td.find_all('a'):
             if not a.get('style'):
                 a['style'] = _SIMPLE_A_STYLE
+        for li in td.find_all('li'):
+            if not li.get('style'):
+                li['style'] = _SIMPLE_P_STYLE
+        for ul in td.find_all('ul'):
+            if not ul.get('style'):
+                ul['style'] = "margin: 0 0 16px 0; padding-left: 24px;"
 
-    # Button text and URL
+    # Button — optional: remove the entire button <tr> if disabled
+    show_button = fields.get('show_button', True)
     btn_div = soup.find('div', class_='simple-button')
-    if btn_div:
+    if btn_div and not show_button:
+        btn_tr = btn_div.find_parent('tr')
+        if btn_tr:
+            btn_tr.decompose()
+    elif btn_div:
         btn_text = fields.get('button_text', '').strip()
         btn_url = fields.get('button_url', '').strip()
         a_tag = btn_div.find('a')
@@ -2455,6 +2499,74 @@ def _inject_simple(soup, fields):
     if copyright_p:
         year = datetime.now().year
         copyright_p.string = f'\u00a9 {year} ParentData. All rights reserved.'
+
+    # Banner sections — keep at most one, remove the others
+    banner_type = fields.get('banner_type', 'none')  # 'none', 'single', 'stacked'
+    promo_section = soup.find(id='promo-banner-section')
+    stacked_section = soup.find(id='stacked-banner-section')
+
+    if banner_type == 'single' and promo_section:
+        # Populate single-card (non-stacked) banner
+        promo = fields.get('promo', {})
+        _set_class_text(promo_section, 'promo-headline', promo.get('headline'))
+        _set_class_text(promo_section, 'promo-plan-name', promo.get('plan_name'))
+        _set_class_text(promo_section, 'promo-old-price', promo.get('old_price'))
+        _set_class_text(promo_section, 'promo-new-price', promo.get('new_price'))
+        _set_class_text(promo_section, 'promo-fine-print', promo.get('fine_print'))
+        cta_a = promo_section.find('a', class_='promo-cta-btn')
+        if cta_a:
+            if promo.get('cta_url'):
+                cta_a['href'] = promo['cta_url']
+            if promo.get('cta_text'):
+                span = cta_a.find('span')
+                if span:
+                    span.clear()
+                    span.append(NavigableString(promo['cta_text']))
+        if stacked_section:
+            stacked_section.decompose()
+    elif banner_type == 'stacked' and stacked_section:
+        # Populate dual-card (stacked) banner
+        stacked = fields.get('stacked', {})
+        _set_class_text(stacked_section, 'stacked-headline', stacked.get('headline'))
+        _set_class_text(stacked_section, 'stacked-footnote', stacked.get('footnote'))
+        # Card 1 (annual)
+        _set_class_text(stacked_section, 'stacked-plan1-name', stacked.get('plan1_name'))
+        _set_class_text(stacked_section, 'stacked-plan1-old-price', stacked.get('plan1_old_price'))
+        _set_class_text(stacked_section, 'stacked-plan1-new-price', stacked.get('plan1_new_price'))
+        _set_class_text(stacked_section, 'stacked-plan1-per-unit', stacked.get('plan1_per_unit'))
+        _set_class_text(stacked_section, 'stacked-plan1-badge', stacked.get('plan1_badge'))
+        cta1 = stacked_section.find('a', class_='stacked-plan1-cta')
+        if cta1:
+            if stacked.get('plan1_cta_url'):
+                cta1['href'] = stacked['plan1_cta_url']
+            if stacked.get('plan1_cta_text'):
+                span = cta1.find('span')
+                if span:
+                    span.clear()
+                    span.append(NavigableString(stacked['plan1_cta_text']))
+        # Card 2 (monthly)
+        _set_class_text(stacked_section, 'stacked-plan2-name', stacked.get('plan2_name'))
+        _set_class_text(stacked_section, 'stacked-plan2-old-price', stacked.get('plan2_old_price'))
+        _set_class_text(stacked_section, 'stacked-plan2-new-price', stacked.get('plan2_new_price'))
+        _set_class_text(stacked_section, 'stacked-plan2-per-unit', stacked.get('plan2_per_unit'))
+        _set_class_text(stacked_section, 'stacked-plan2-badge', stacked.get('plan2_badge'))
+        cta2 = stacked_section.find('a', class_='stacked-plan2-cta')
+        if cta2:
+            if stacked.get('plan2_cta_url'):
+                cta2['href'] = stacked['plan2_cta_url']
+            if stacked.get('plan2_cta_text'):
+                span = cta2.find('span')
+                if span:
+                    span.clear()
+                    span.append(NavigableString(stacked['plan2_cta_text']))
+        if promo_section:
+            promo_section.decompose()
+    else:
+        # No banner — remove both
+        if promo_section:
+            promo_section.decompose()
+        if stacked_section:
+            stacked_section.decompose()
 
 
 # ── Marketing Flex template ───────────────────────────────────────────────────

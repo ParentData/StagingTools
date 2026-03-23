@@ -617,15 +617,11 @@ def _process_docx(tmp_path: str, template_type: str = 'standard') -> dict:
         return {'sections': sections}
 
     if template_type == 'marketing_digest':
-        from docx_parser import parse_paid_digest_docx
+        from docx_parser import parse_marketing_digest_docx
         from wp_fetcher import fetch_article_metadata
 
-        digest = parse_paid_digest_docx(tmp_path)
-        # Flatten all articles across sections into a single list
-        all_articles = []
-        for section in digest.get('sections', []):
-            for article in section.get('articles', []):
-                all_articles.append(article)
+        digest = parse_marketing_digest_docx(tmp_path)
+        all_articles = digest.get('articles', [])
 
         for article in all_articles:
             if article.get('url'):
@@ -641,7 +637,10 @@ def _process_docx(tmp_path: str, template_type: str = 'standard') -> dict:
                     article.setdefault('image_url', '')
                     article.setdefault('image_alt', '')
 
-        return {'articles': all_articles}
+        return {
+            'intro_html': digest.get('intro_html', ''),
+            'articles': all_articles,
+        }
 
     if template_type == 'baby_send_a':
         from docx_parser import parse_baby_send_a_docx
