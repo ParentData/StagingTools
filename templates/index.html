@@ -784,42 +784,51 @@
     <div id="marketing-digest-cards"></div>
 
     <div style="border-top:1px solid #e0e0e0;margin-top:20px;padding-top:16px;">
-      <h3 style="margin:0 0 12px;font-size:16px;">Promotional Banner</h3>
+      <h3 style="margin:0 0 12px;font-size:16px;">Pricing Banner</h3>
       <div class="field-group">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-          <input type="checkbox" id="md-show-promo" onchange="toggleMdPromo()">
-          Include promo banner below articles
-        </label>
+        <label>Banner type</label>
+        <div style="display:flex; gap:16px; margin-top:4px;">
+          <label style="font-weight:400;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="radio" name="md-banner-type" value="none" checked onchange="toggleMdBanner()"> None</label>
+          <label style="font-weight:400;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="radio" name="md-banner-type" value="single" onchange="toggleMdBanner()"> Single card</label>
+          <label style="font-weight:400;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="radio" name="md-banner-type" value="stacked" onchange="toggleMdBanner()"> Dual cards</label>
+        </div>
       </div>
+
+      <!-- Single card fields -->
       <div id="md-promo-fields" style="display:none; margin-left:20px;">
-        <div class="field-group">
-          <label for="md-promo-headline">Banner Headline</label>
-          <input type="text" id="md-promo-headline" value="Redeem your free month today!">
-        </div>
-        <div class="field-group">
-          <label for="md-promo-plan">Plan Name</label>
-          <input type="text" id="md-promo-plan" value="Monthly">
-        </div>
-        <div class="field-group">
-          <label for="md-promo-old-price">Old Price (strikethrough)</label>
-          <input type="text" id="md-promo-old-price" value="$12/mo">
-        </div>
-        <div class="field-group">
-          <label for="md-promo-new-price">New Price</label>
-          <input type="text" id="md-promo-new-price" value="First month free">
-        </div>
-        <div class="field-group">
-          <label for="md-promo-fine-print">Fine Print</label>
-          <input type="text" id="md-promo-fine-print" value="then $12/mo &mdash; cancel anytime">
-        </div>
-        <div class="field-group">
-          <label for="md-promo-cta-text">CTA Button Text</label>
-          <input type="text" id="md-promo-cta-text" value="REDEEM NOW">
-        </div>
-        <div class="field-group">
-          <label for="md-promo-cta-url">CTA URL</label>
-          <input type="url" id="md-promo-cta-url" value="https://parentdata.org/register/plus/?coupon=firstmonthfree">
-        </div>
+        <div class="field-group"><label>Headline</label><input type="text" id="md-promo-headline" value="Redeem your free month today!"></div>
+        <div class="field-group"><label>Plan Name</label><input type="text" id="md-promo-plan" value="Monthly"></div>
+        <div class="field-group"><label>Old Price</label><input type="text" id="md-promo-old-price" value="$12/mo"></div>
+        <div class="field-group"><label>New Price</label><input type="text" id="md-promo-new-price" value="First month free"></div>
+        <div class="field-group"><label>Fine Print</label><input type="text" id="md-promo-fine-print" value="then $12/mo &mdash; cancel anytime"></div>
+        <div class="field-group"><label>CTA Text</label><input type="text" id="md-promo-cta-text" value="REDEEM NOW"></div>
+        <div class="field-group"><label>CTA URL</label><input type="url" id="md-promo-cta-url" value="https://parentdata.org/register/plus/?coupon=firstmonthfree"></div>
+      </div>
+
+      <!-- Dual cards fields -->
+      <div id="md-stacked-fields" style="display:none; margin-left:20px;">
+        <div class="field-group"><label>Headline</label><input type="text" id="md-stacked-headline" value="Choose your plan"></div>
+        <fieldset style="border:1px solid #e0e0e0;border-radius:8px;padding:12px;margin-bottom:8px;">
+          <legend>Card 1 (Annual)</legend>
+          <div class="field-group"><label>Plan Name</label><input type="text" id="md-s-plan1-name" value="Annual"></div>
+          <div class="field-group"><label>Old Price</label><input type="text" id="md-s-plan1-old" value="$120/yr"></div>
+          <div class="field-group"><label>New Price</label><input type="text" id="md-s-plan1-new" value="$99"></div>
+          <div class="field-group"><label>Per-unit</label><input type="text" id="md-s-plan1-per" value="per year"></div>
+          <div class="field-group"><label>Badge</label><input type="text" id="md-s-plan1-badge" value="Save 20%"></div>
+          <div class="field-group"><label>CTA Text</label><input type="text" id="md-s-plan1-cta-text" value="Get Annual"></div>
+          <div class="field-group"><label>CTA URL</label><input type="url" id="md-s-plan1-cta-url" value="https://parentdata.org/register/plus-yearly/?coupon=yearly99"></div>
+        </fieldset>
+        <fieldset style="border:1px solid #e0e0e0;border-radius:8px;padding:12px;margin-bottom:8px;">
+          <legend>Card 2 (Monthly)</legend>
+          <div class="field-group"><label>Plan Name</label><input type="text" id="md-s-plan2-name" value="Monthly"></div>
+          <div class="field-group"><label>Old Price</label><input type="text" id="md-s-plan2-old" value="$12/mo"></div>
+          <div class="field-group"><label>New Price</label><input type="text" id="md-s-plan2-new" value="$9"></div>
+          <div class="field-group"><label>Per-unit</label><input type="text" id="md-s-plan2-per" value="per month"></div>
+          <div class="field-group"><label>Badge</label><input type="text" id="md-s-plan2-badge" value="Pay as you go"></div>
+          <div class="field-group"><label>CTA Text</label><input type="text" id="md-s-plan2-cta-text" value="Go Monthly"></div>
+          <div class="field-group"><label>CTA URL</label><input type="url" id="md-s-plan2-cta-url" value="https://parentdata.org/register/plus/?coupon=monthly3"></div>
+        </fieldset>
+        <div class="field-group"><label>Footnote</label><input type="text" id="md-stacked-footnote" value="cancel anytime"></div>
       </div>
     </div>
   </section>
@@ -1501,9 +1510,10 @@ function updateMdCardVisibility() {
   }
 }
 
-function toggleMdPromo() {
-  document.getElementById('md-promo-fields').style.display =
-    document.getElementById('md-show-promo').checked ? '' : 'none';
+function toggleMdBanner() {
+  const val = document.querySelector('input[name="md-banner-type"]:checked').value;
+  document.getElementById('md-promo-fields').style.display = val === 'single' ? '' : 'none';
+  document.getElementById('md-stacked-fields').style.display = val === 'stacked' ? '' : 'none';
 }
 
 // Store qa_authors from upload response for use at generate time
@@ -2155,14 +2165,16 @@ async function generateEmail() {
         image_alt: document.getElementById(`md-art-imgalt-${i}`).value,
       });
     }
-    const showPromo = document.getElementById('md-show-promo').checked;
+    const mdBannerType = document.querySelector('input[name="md-banner-type"]:checked').value;
     payload = {
       template_type: 'marketing_digest',
       intro_html: document.getElementById('md-intro').value,
       articles: articles,
       card_count: cardCount,
-      show_promo_banner: showPromo,
-      promo: showPromo ? {
+      banner_type: mdBannerType,
+    };
+    if (mdBannerType === 'single') {
+      payload.promo = {
         headline:   document.getElementById('md-promo-headline').value,
         plan_name:  document.getElementById('md-promo-plan').value,
         old_price:  document.getElementById('md-promo-old-price').value,
@@ -2170,8 +2182,27 @@ async function generateEmail() {
         fine_print: document.getElementById('md-promo-fine-print').value,
         cta_text:   document.getElementById('md-promo-cta-text').value,
         cta_url:    document.getElementById('md-promo-cta-url').value,
-      } : {},
-    };
+      };
+    } else if (mdBannerType === 'stacked') {
+      payload.stacked = {
+        headline:        document.getElementById('md-stacked-headline').value,
+        plan1_name:      document.getElementById('md-s-plan1-name').value,
+        plan1_old_price: document.getElementById('md-s-plan1-old').value,
+        plan1_new_price: document.getElementById('md-s-plan1-new').value,
+        plan1_per_unit:  document.getElementById('md-s-plan1-per').value,
+        plan1_badge:     document.getElementById('md-s-plan1-badge').value,
+        plan1_cta_text:  document.getElementById('md-s-plan1-cta-text').value,
+        plan1_cta_url:   document.getElementById('md-s-plan1-cta-url').value,
+        plan2_name:      document.getElementById('md-s-plan2-name').value,
+        plan2_old_price: document.getElementById('md-s-plan2-old').value,
+        plan2_new_price: document.getElementById('md-s-plan2-new').value,
+        plan2_per_unit:  document.getElementById('md-s-plan2-per').value,
+        plan2_badge:     document.getElementById('md-s-plan2-badge').value,
+        plan2_cta_text:  document.getElementById('md-s-plan2-cta-text').value,
+        plan2_cta_url:   document.getElementById('md-s-plan2-cta-url').value,
+        footnote:        document.getElementById('md-stacked-footnote').value,
+      };
+    }
   } else if (isToddlerArticle) {
     const subtitleLines = document.getElementById('f-subtitle').value
       .split('\n').map(s => s.trim()).filter(Boolean);

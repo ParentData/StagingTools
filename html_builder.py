@@ -149,6 +149,13 @@ def build_email_html(template_path: str, fields: dict, template_type: str = 'sta
         title = fields.get('title', '')
         subtitle = fields.get('subtitle', '')
         html = replace_header_footer(html, title=title, subtitle=subtitle)
+        # Simple emails often have no title — make the header banner taller
+        if template_type == 'simple' and not title:
+            html = html.replace(
+                'padding: 20px 0px 24px',
+                'padding: 40px 0px 44px',
+                1,  # only the first occurrence (the header)
+            )
 
     # Run all email-checker auto-fixes so the output is already clean
     return apply_email_fixes(html)
@@ -1974,28 +1981,60 @@ def _inject_marketing_digest(soup, fields):
             if parent_tr:
                 parent_tr.decompose()
 
-    # Handle promo banner
+    # Handle banner sections — keep at most one, remove the others
+    banner_type = fields.get('banner_type', 'none')
+    # Legacy: treat show_promo_banner=True as banner_type='single'
+    if banner_type == 'none' and fields.get('show_promo_banner'):
+        banner_type = 'single'
+
     promo_section = soup.find(id='promo-banner-section')
-    if promo_section:
-        if not fields.get('show_promo_banner'):
-            promo_section.decompose()
-        else:
-            promo = fields.get('promo', {})
-            _set_class_text(promo_section, 'promo-headline', promo.get('headline'))
-            _set_class_text(promo_section, 'promo-plan-name', promo.get('plan_name'))
-            _set_class_text(promo_section, 'promo-old-price', promo.get('old_price'))
-            _set_class_text(promo_section, 'promo-new-price', promo.get('new_price'))
-            _set_class_text(promo_section, 'promo-fine-print', promo.get('fine_print'))
-            # CTA button
-            cta_a = promo_section.find('a', class_='promo-cta-btn')
-            if cta_a:
-                if promo.get('cta_url'):
-                    cta_a['href'] = promo['cta_url']
-                if promo.get('cta_text'):
-                    span = cta_a.find('span')
+    stacked_section = soup.find(id='stacked-banner-section')
+
+    if banner_type == 'single' and promo_section:
+        promo = fields.get('promo', {})
+        _set_class_text(promo_section, 'promo-headline', promo.get('headline'))
+        _set_class_text(promo_section, 'promo-plan-name', promo.get('plan_name'))
+        _set_class_text(promo_section, 'promo-old-price', promo.get('old_price'))
+        _set_class_text(promo_section, 'promo-new-price', promo.get('new_price'))
+        _set_class_text(promo_section, 'promo-fine-print', promo.get('fine_print'))
+        cta_a = promo_section.find('a', class_='promo-cta-btn')
+        if cta_a:
+            if promo.get('cta_url'):
+                cta_a['href'] = promo['cta_url']
+            if promo.get('cta_text'):
+                span = cta_a.find('span')
+                if span:
+                    span.clear()
+                    span.append(NavigableString(promo['cta_text']))
+        if stacked_section:
+            stacked_section.decompose()
+    elif banner_type == 'stacked' and stacked_section:
+        stacked = fields.get('stacked', {})
+        _set_class_text(stacked_section, 'stacked-headline', stacked.get('headline'))
+        _set_class_text(stacked_section, 'stacked-footnote', stacked.get('footnote'))
+        for card_num in ('1', '2'):
+            prefix = f'plan{card_num}'
+            _set_class_text(stacked_section, f'stacked-plan{card_num}-name', stacked.get(f'{prefix}_name'))
+            _set_class_text(stacked_section, f'stacked-plan{card_num}-old-price', stacked.get(f'{prefix}_old_price'))
+            _set_class_text(stacked_section, f'stacked-plan{card_num}-new-price', stacked.get(f'{prefix}_new_price'))
+            _set_class_text(stacked_section, f'stacked-plan{card_num}-per-unit', stacked.get(f'{prefix}_per_unit'))
+            _set_class_text(stacked_section, f'stacked-plan{card_num}-badge', stacked.get(f'{prefix}_badge'))
+            cta = stacked_section.find('a', class_=f'stacked-plan{card_num}-cta')
+            if cta:
+                if stacked.get(f'{prefix}_cta_url'):
+                    cta['href'] = stacked[f'{prefix}_cta_url']
+                if stacked.get(f'{prefix}_cta_text'):
+                    span = cta.find('span')
                     if span:
                         span.clear()
-                        span.append(NavigableString(promo['cta_text']))
+                        span.append(NavigableString(stacked[f'{prefix}_cta_text']))
+        if promo_section:
+            promo_section.decompose()
+    else:
+        if promo_section:
+            promo_section.decompose()
+        if stacked_section:
+            stacked_section.decompose()
 
     _update_copyright(soup)
 
@@ -2013,6 +2052,13 @@ def _inject_marketing(soup, fields):
     _update_title(soup, fields)
     _update_marketing_banner(soup, fields)
     _update_marketing_intro(soup, fields)
+    # Remove the template's placeholder featured image row (if still present)
+    # to prevent duplication when _replace_marketing_body inserts the real one.
+    placeholder_img = soup.find('img', alt='Independent Activities')
+    if placeholder_img:
+        tr = _outer_email_tr(placeholder_img, soup)
+        if tr:
+            tr.decompose()
     # Body replacement must run BEFORE pricing removal — it uses the
     # "UPGRADE NOW" link as an anchor to locate the body rows.
     _replace_marketing_body(soup, fields)
@@ -3335,6 +3381,13 @@ def replace_header_footer(html: str, title: str = '', subtitle: str = '') -> str
         raise ValueError('Could not find a logo image in the input HTML')
     input_header_tr = input_logo.find_parent('tr')
     if input_header_tr:
+        # Remove the input's existing hero <tr> (if present) before replacing
+        # the header — this prevents duplication when the input already has
+        # a Latest-style header + hero.
+        input_next_tr = input_header_tr.find_next_sibling('tr')
+        if input_next_tr and input_next_tr.find('h1', class_='headline-mobile'):
+            input_next_tr.decompose()
+
         new_header = copy.copy(latest_header_tr)
         input_header_tr.replace_with(new_header)
 
