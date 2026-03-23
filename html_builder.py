@@ -1700,6 +1700,33 @@ def _update_digest_cards(soup, fields):
 
 def _inject_paid_digest(soup, fields):
     """Inject section names and article data into the paid digest template."""
+    # If the doc has an intro, insert it in italics before the existing
+    # intro content and remove the "Welcome to the Digest!" lines.
+    intro_html = fields.get('intro_html', '')
+    if intro_html and intro_html.strip():
+        intro_td = soup.find('td', class_='table-box')
+        if intro_td:
+            # Remove all "Welcome to the Digest!" paragraphs
+            for p in intro_td.find_all('p'):
+                if 'Welcome to the Digest' in p.get_text():
+                    p.decompose()
+            # Build italic intro block
+            intro_soup = BeautifulSoup(intro_html, 'html.parser')
+            for p in intro_soup.find_all('p'):
+                existing = p.get('style', '')
+                italic_style = (
+                    "font-family: 'DM Sans', Arial, Helvetica, sans-serif; "
+                    "font-weight: normal; font-style: italic; font-size: 16px; "
+                    "line-height: 160%; color: rgb(40, 40, 40); margin: 0 0 16px;"
+                )
+                p['style'] = italic_style
+            # Insert italic intro at the top of the td
+            first_child = intro_td.find()
+            if first_child:
+                first_child.insert_before(intro_soup)
+            else:
+                intro_td.append(intro_soup)
+
     _update_paid_digest_cards(soup, fields)
     _update_copyright(soup)
 

@@ -614,7 +614,10 @@ def _process_docx(tmp_path: str, template_type: str = 'standard') -> dict:
                         article.setdefault('image_url', '')
                         article.setdefault('image_alt', '')
 
-        return {'sections': sections}
+        return {
+            'sections': sections,
+            'intro_html': digest.get('intro_html', ''),
+        }
 
     if template_type == 'marketing_digest':
         from docx_parser import parse_marketing_digest_docx

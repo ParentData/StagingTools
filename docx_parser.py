@@ -245,7 +245,54 @@ def parse_paid_digest_docx(file_path: str) -> dict:
     # Strip trailing numbers from headings: "Popular this week 1" → "Popular this week"
     trailing_num_re = re.compile(r'\s+\d+\s*$')
 
-    for para in doc.paragraphs:
+    # Identify intro paragraphs: everything before the first line containing a URL
+    # or a line that looks like a section heading followed by a URL line.
+    first_url_idx = None
+    for i, para in enumerate(doc.paragraphs):
+        text = para.text.strip()
+        if text and url_re.search(text):
+            first_url_idx = i
+            break
+
+    # Check if the paragraph just before the first URL is a section heading
+    # (e.g. "Popular this week 1") — if so, exclude it from intro
+    intro_end_idx = first_url_idx or 0
+    if intro_end_idx > 0:
+        prev_text = doc.paragraphs[intro_end_idx - 1].text.strip()
+        # If previous non-empty line has no URL and looks like a section name
+        # (short text, no sentences), pull it out of the intro
+        if prev_text and not url_re.search(prev_text) and len(prev_text) < 60:
+            # Check if it matches a known section pattern
+            if trailing_num_re.search(prev_text) or re.match(
+                r'^(Popular|Pregnancy|Babies|Toddlers|Big\s+kids)', prev_text, re.I
+            ):
+                intro_end_idx -= 1
+
+    # Convert intro paragraphs to HTML via mammoth
+    intro_html = ''
+    if intro_end_idx and intro_end_idx > 0:
+        with open(file_path, 'rb') as f:
+            mammoth_result = mammoth.convert_to_html(f)
+        from bs4 import BeautifulSoup as _BS
+        soup = _BS(mammoth_result.value, 'html.parser')
+        intro_parts = []
+        for el in soup.children:
+            text = el.get_text() if hasattr(el, 'get_text') else str(el)
+            if url_re.search(text):
+                break
+            # Stop if we hit a section heading pattern
+            stripped = text.strip()
+            if stripped and trailing_num_re.search(stripped):
+                break
+            if stripped and re.match(
+                r'^(Popular|Pregnancy|Babies|Toddlers|Big\s+kids)', stripped, re.I
+            ):
+                break
+            intro_parts.append(str(el))
+        intro_html = ''.join(intro_parts).strip()
+
+    # Build sections only from paragraphs at or after the first URL line
+    for para in doc.paragraphs[first_url_idx if first_url_idx is not None else 0:]:
         text = para.text.strip()
         if not text:
             continue
@@ -279,7 +326,7 @@ def parse_paid_digest_docx(file_path: str) -> dict:
 
             sections.append({'name': name, 'articles': []})
 
-    return {'sections': sections}
+    return {'sections': sections, 'intro_html': intro_html}
 
 
 def parse_marketing_digest_docx(file_path: str) -> dict:

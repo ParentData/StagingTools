@@ -535,6 +535,13 @@
   <!-- ── Step 2 (Paid Digest): Extracted Fields ────────────────────── -->
   <section id="section-paid-digest" class="card" hidden>
     <h2>2. Review Paid Digest Fields</h2>
+    <div class="field-group">
+      <label for="pd-intro">Intro (italic, before "Welcome to the Digest" — leave empty for none)</label>
+      <details>
+        <summary>Show / hide intro</summary>
+        <textarea id="pd-intro" rows="6" class="code-area" placeholder="Intro HTML will appear here if the doc has one…"></textarea>
+      </details>
+    </div>
     <div id="paid-digest-sections"></div>
   </section>
 
@@ -1830,6 +1837,7 @@ function buildDigestCards(articles) {
 }
 
 function populatePaidDigestFields(data) {
+  document.getElementById('pd-intro').value = data.intro_html || '';
   buildPaidDigestSections(data.sections || []);
 }
 
@@ -2268,6 +2276,7 @@ async function generateEmail() {
     payload = {
       template_type: currentTemplate,
       sections: sections,
+      intro_html: document.getElementById('pd-intro').value,
     };
   } else if (isLatestTeaser) {
     const subtitleLines = document.getElementById('lt-subtitle').value
