@@ -101,6 +101,8 @@ def build_email_html(template_path: str, fields: dict, template_type: str = 'sta
         _inject_fertility(soup, fields)
     elif template_type == 'marketing':
         _inject_marketing(soup, fields)
+    elif template_type == 'marketing_digest':
+        _inject_marketing_digest(soup, fields)
     elif template_type == 'fertility_digest':
         _inject_fertility_digest(soup, fields)
     elif template_type in ('paid_digest', 'free_digest'):
@@ -119,8 +121,6 @@ def build_email_html(template_path: str, fields: dict, template_type: str = 'sta
         _inject_toddler_digest(soup, fields)
     elif template_type == 'simple':
         _inject_simple(soup, fields)
-    elif template_type == 'marketing_flex':
-        _inject_marketing_flex(soup, fields)
     elif template_type == 'baby_send_a':
         _inject_baby_send_a(soup, fields)
     elif template_type == 'baby_send_b':
@@ -143,6 +143,10 @@ def build_email_html(template_path: str, fields: dict, template_type: str = 'sta
 
     # Replace [[GRAPH_N]] placeholders with inline image blocks
     html = _replace_graph_placeholders(html, fields.get('inline_graphs', []))
+
+    # Marketing: swap header & footer to match the Latest template
+    if template_type in ('marketing', 'marketing_digest'):
+        html = replace_header_footer(html)
 
     # Run all email-checker auto-fixes so the output is already clean
     return apply_email_fixes(html)
@@ -1116,7 +1120,12 @@ def _inject_baby_send_a(soup, fields):
     """Inject all fields into the BabyData Send A template."""
     _update_title(soup, fields)
     _update_baby_banner(soup, fields)
-    _update_headline(soup, fields)
+    # Remove the "Your first week with baby" headline
+    h1 = soup.find('h1', class_='headline-mobile')
+    if h1:
+        tr = h1.find_parent('tr')
+        if tr:
+            tr.decompose()
     _inject_baby_send_a_intro(soup, fields)
     _inject_baby_send_a_sections(soup, fields)
     _update_copyright(soup)
@@ -1382,13 +1391,14 @@ def _inject_baby_send_b_real_talk(soup, fields):
                 paragraphs[0].append(
                     BeautifulSoup(prompt, 'html.parser'),
                 )
-            # Second <p>: the italic quote
+            # Second <p>: the italic quote with quotation marks
             if len(paragraphs) > 1 and quote:
                 paragraphs[1].clear()
-                # Wrap in <em> with a leading <br> to match template style
+                # Strip existing quotes if present, then wrap in curly quotes + <em>
+                q = quote.strip().strip('\u201c\u201d\u201e\u201f"\'')
                 paragraphs[1].append(
                     BeautifulSoup(
-                        f'<em><br>{quote}</em>', 'html.parser',
+                        f'<em><br>\u201c{q}\u201d</em>', 'html.parser',
                     ),
                 )
             break
@@ -1859,6 +1869,89 @@ _STYLE_P_MKT_INTRO = (
     "font-family: 'DM Sans', Arial, Helvetica, sans-serif; font-weight: normal; "
     "font-size: 16px; line-height: 24px; color: #000000; font-style: italic;"
 )
+
+
+def _inject_marketing_digest(soup, fields):
+    """Inject article cards and optional promo banner into the marketing digest template."""
+    _update_title(soup, fields)
+
+    articles = fields.get('articles', [])
+    card_count = int(fields.get('card_count', len(articles)))
+
+    # Populate / remove article cards
+    card_tables = soup.find_all('table', class_='newsletter-card')
+    for i, card in enumerate(card_tables):
+        if i < len(articles) and i < card_count:
+            article = articles[i]
+            # Update images (mobile + desktop)
+            for img in card.find_all('img'):
+                if article.get('image_url'):
+                    img['src'] = article['image_url']
+                img['alt'] = _escape_attr(
+                    article.get('image_alt', '') or article.get('title', '')
+                )
+            # Title
+            h3 = card.find('h3')
+            if h3:
+                h3.clear()
+                h3.append(NavigableString(article.get('title', '')))
+            # Subtitle
+            for p in card.find_all('p'):
+                style = p.get('style', '')
+                if 'DM Sans' in style and 'line-height' in style:
+                    p.clear()
+                    p.append(NavigableString(article.get('subtitle', '')))
+                    break
+            # Read more link
+            for a in card.find_all('a'):
+                if 'read more' in (a.get_text() or '').lower().strip():
+                    a['href'] = article.get('url', '#')
+                    break
+        else:
+            # Remove excess card: walk up to the <tr> that holds the <td class="content-pad">
+            parent_td = card.find_parent('td', class_='content-pad')
+            if parent_td:
+                parent_tr = parent_td.find_parent('tr')
+                if parent_tr:
+                    parent_tr.decompose()
+                    continue
+            # Fallback: just remove the nearest tr
+            parent_tr = card.find_parent('tr')
+            if parent_tr:
+                parent_tr.decompose()
+
+    # Handle promo banner
+    promo_section = soup.find(id='promo-banner-section')
+    if promo_section:
+        if not fields.get('show_promo_banner'):
+            promo_section.decompose()
+        else:
+            promo = fields.get('promo', {})
+            _set_class_text(promo_section, 'promo-headline', promo.get('headline'))
+            _set_class_text(promo_section, 'promo-plan-name', promo.get('plan_name'))
+            _set_class_text(promo_section, 'promo-old-price', promo.get('old_price'))
+            _set_class_text(promo_section, 'promo-new-price', promo.get('new_price'))
+            _set_class_text(promo_section, 'promo-fine-print', promo.get('fine_print'))
+            # CTA button
+            cta_a = promo_section.find('a', class_='promo-cta-btn')
+            if cta_a:
+                if promo.get('cta_url'):
+                    cta_a['href'] = promo['cta_url']
+                if promo.get('cta_text'):
+                    span = cta_a.find('span')
+                    if span:
+                        span.clear()
+                        span.append(NavigableString(promo['cta_text']))
+
+    _update_copyright(soup)
+
+
+def _set_class_text(container, class_name, text):
+    """Helper: set the text of the first element with the given class."""
+    el = container.find(class_=class_name)
+    if el and text:
+        el.clear()
+        el.append(NavigableString(text))
 
 
 def _inject_marketing(soup, fields):
@@ -3130,6 +3223,16 @@ def replace_header_footer(html: str, title: str = '', subtitle: str = '') -> str
                 )
                 sub_td.append(new_p)
             new_header.insert_after(hero)
+            insert_after = hero
+        else:
+            insert_after = new_header
+
+        # Add a small spacer between header/hero and article content
+        spacer = BeautifulSoup(
+            '<tr><td style="height:12px; font-size:0; line-height:0;">&nbsp;</td></tr>',
+            'html.parser',
+        ).find('tr')
+        insert_after.insert_after(spacer)
 
     # Replace footer: find the <tr> containing the Footer Logo
     input_footer_logo = soup.find('img', alt='Footer Logo')

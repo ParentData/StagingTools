@@ -10,7 +10,7 @@
 
 <header>
   <h1>ParentData Email Staging Tool</h1>
-  <p style="margin:4px 0 0;font-size:14px;color:#666;"><a href="/email-checker" style="color:#3b82f6;text-decoration:none;">One-off Email Checker</a> &middot; <a href="/replace-header-footer" style="color:#3b82f6;text-decoration:none;">Replace Header &amp; Footer</a></p>
+  <p style="margin:4px 0 0;font-size:14px;color:#666;"><a href="/email-checker" style="color:#3b82f6;text-decoration:none;">One-off Email Checker</a></p>
 </header>
 
 <main>
@@ -28,7 +28,8 @@
         </optgroup>
         <optgroup label="Marketing">
           <option value="marketing">Full Article Send</option>
-          <option value="marketing_flex">Flex</option>
+          <option value="marketing_digest">Digest Send</option>
+          <option value="replace_hf">Replace Header &amp; Footer</option>
           <option value="simple">Simple Email</option>
         </optgroup>
         <optgroup label="Fertility">
@@ -752,6 +753,62 @@
     </div>
   </section>
 
+  <!-- ── Marketing Digest Fields ──────────────────────────────────── -->
+  <section id="section-marketing-digest" class="card" hidden>
+    <h2>2. Review Marketing Digest Fields</h2>
+
+    <div class="field-group">
+      <label>Number of article cards</label>
+      <div style="display:flex; gap:16px; margin-top:4px;">
+        <label style="font-weight:400;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="radio" name="md-card-count" value="3" onchange="updateMdCardVisibility()"> 3</label>
+        <label style="font-weight:400;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="radio" name="md-card-count" value="4" onchange="updateMdCardVisibility()"> 4</label>
+        <label style="font-weight:400;display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="radio" name="md-card-count" value="5" checked onchange="updateMdCardVisibility()"> 5</label>
+      </div>
+    </div>
+
+    <div id="marketing-digest-cards"></div>
+
+    <div style="border-top:1px solid #e0e0e0;margin-top:20px;padding-top:16px;">
+      <h3 style="margin:0 0 12px;font-size:16px;">Promotional Banner</h3>
+      <div class="field-group">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="md-show-promo" onchange="toggleMdPromo()">
+          Include promo banner below articles
+        </label>
+      </div>
+      <div id="md-promo-fields" style="display:none; margin-left:20px;">
+        <div class="field-group">
+          <label for="md-promo-headline">Banner Headline</label>
+          <input type="text" id="md-promo-headline" value="Redeem your free month today!">
+        </div>
+        <div class="field-group">
+          <label for="md-promo-plan">Plan Name</label>
+          <input type="text" id="md-promo-plan" value="Monthly">
+        </div>
+        <div class="field-group">
+          <label for="md-promo-old-price">Old Price (strikethrough)</label>
+          <input type="text" id="md-promo-old-price" value="$12/mo">
+        </div>
+        <div class="field-group">
+          <label for="md-promo-new-price">New Price</label>
+          <input type="text" id="md-promo-new-price" value="First month free">
+        </div>
+        <div class="field-group">
+          <label for="md-promo-fine-print">Fine Print</label>
+          <input type="text" id="md-promo-fine-print" value="then $12/mo &mdash; cancel anytime">
+        </div>
+        <div class="field-group">
+          <label for="md-promo-cta-text">CTA Button Text</label>
+          <input type="text" id="md-promo-cta-text" value="REDEEM NOW">
+        </div>
+        <div class="field-group">
+          <label for="md-promo-cta-url">CTA URL</label>
+          <input type="url" id="md-promo-cta-url" value="https://parentdata.org/register/plus/?coupon=firstmonthfree">
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ── Simple Email Fields ────────────────────────────────────────── -->
   <section id="section-simple" class="card" hidden>
     <h2>2. Review Simple Email Fields</h2>
@@ -774,96 +831,6 @@
     <div class="field-group">
       <label for="simple-post-button">Post-button text (HTML)</label>
       <textarea id="simple-post-button" rows="8" class="code-area" placeholder="&lt;p&gt;Text after the button…&lt;/p&gt;"></textarea>
-    </div>
-  </section>
-
-  <!-- ── Marketing Flex Fields ──────────────────────────────────────── -->
-  <section id="section-mflex" class="card" hidden>
-    <h2>2. Review Marketing Flex Fields</h2>
-
-    <div class="field-group">
-      <label for="mf-title">Email Title</label>
-      <input type="text" id="mf-title" placeholder="e.g. Don't miss out on 30% off">
-    </div>
-
-    <div class="field-group">
-      <label for="mf-body">Body HTML</label>
-      <details>
-        <summary>Show / hide body</summary>
-        <textarea id="mf-body" rows="16" class="code-area" placeholder="Body HTML will appear here after upload…"></textarea>
-      </details>
-    </div>
-
-    <!-- CTA Buttons -->
-    <div class="field-group">
-      <label>CTA Buttons</label>
-      <div id="mf-buttons-container">
-        <div class="mf-button-row" data-index="0" style="border:1px solid #e0e0e0; border-radius:8px; padding:12px; margin-bottom:8px;">
-          <div style="display:flex;gap:8px;margin-bottom:6px;">
-            <input type="text" id="mf-btn-label-0" placeholder="Button label" style="flex:1;">
-            <input type="url" id="mf-btn-url-0" placeholder="https://…" style="flex:1;">
-          </div>
-          <div style="display:flex;gap:16px;flex-wrap:wrap;">
-            <label style="font-weight:400;display:flex;align-items:center;gap:4px;">
-              <input type="radio" name="mf-btn-style-0" value="pill" checked> Pill
-            </label>
-            <label style="font-weight:400;display:flex;align-items:center;gap:4px;">
-              <input type="radio" name="mf-btn-style-0" value="minimal"> Minimal
-            </label>
-            <label style="font-weight:400;display:flex;align-items:center;gap:4px;">
-              <input type="radio" name="mf-btn-color-0" value="yellow" checked> Yellow
-            </label>
-            <label style="font-weight:400;display:flex;align-items:center;gap:4px;">
-              <input type="radio" name="mf-btn-color-0" value="white"> White
-            </label>
-          </div>
-        </div>
-      </div>
-      <button type="button" class="btn-small" onclick="addMfButton()" id="mf-add-btn" style="margin-top:4px;padding:4px 12px;font-size:13px;cursor:pointer;">+ Add Button</button>
-    </div>
-
-    <!-- Pricing Section -->
-    <div class="field-group">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-        <input type="checkbox" id="mf-show-pricing" onchange="toggleMfPricing(this.checked)">
-        Include pricing section
-      </label>
-    </div>
-
-    <div id="mf-pricing-fields" style="display:none;">
-      <div class="field-group">
-        <label>Pricing layout</label>
-        <div style="display:flex;gap:16px;">
-          <label style="font-weight:400;display:flex;align-items:center;gap:4px;">
-            <input type="radio" name="mf-pricing-mode" value="dual" checked onchange="toggleMfDualPricing()"> Dual cards
-          </label>
-          <label style="font-weight:400;display:flex;align-items:center;gap:4px;">
-            <input type="radio" name="mf-pricing-mode" value="single" onchange="toggleMfDualPricing()"> Single card
-          </label>
-        </div>
-      </div>
-
-      <fieldset id="mf-card1" style="border:1px solid #e0e0e0;border-radius:8px;padding:12px;margin-bottom:8px;">
-        <legend>Card 1</legend>
-        <div class="field-group"><label>Plan name</label><input type="text" id="mf-plan1-name" placeholder="Annual Plan"></div>
-        <div class="field-group"><label>Old price (strikethrough)</label><input type="text" id="mf-plan1-old" placeholder="$120 (leave empty to hide)"></div>
-        <div class="field-group"><label>New price</label><input type="text" id="mf-plan1-new" placeholder="$84/year"></div>
-        <div class="field-group"><label>Per-unit text</label><input type="text" id="mf-plan1-per" placeholder="($7/month) (leave empty to hide)"></div>
-        <div class="field-group"><label>Badge text</label><input type="text" id="mf-plan1-badge" placeholder="SAVE 20% (leave empty to hide)"></div>
-        <div class="field-group"><label>CTA button text</label><input type="text" id="mf-plan1-cta-text" placeholder="Get Annual"></div>
-        <div class="field-group"><label>CTA URL</label><input type="url" id="mf-plan1-url" placeholder="https://parentdata.org/register/…"></div>
-      </fieldset>
-
-      <fieldset id="mf-card2" style="border:1px solid #e0e0e0;border-radius:8px;padding:12px;margin-bottom:8px;">
-        <legend>Card 2</legend>
-        <div class="field-group"><label>Plan name</label><input type="text" id="mf-plan2-name" placeholder="Monthly Plan"></div>
-        <div class="field-group"><label>Old price (strikethrough)</label><input type="text" id="mf-plan2-old" placeholder="$12 (leave empty to hide)"></div>
-        <div class="field-group"><label>New price</label><input type="text" id="mf-plan2-new" placeholder="$7/month"></div>
-        <div class="field-group"><label>Per-unit text</label><input type="text" id="mf-plan2-per" placeholder="(leave empty to hide)"></div>
-        <div class="field-group"><label>Badge text</label><input type="text" id="mf-plan2-badge" placeholder="PAY AS YOU GO (leave empty to hide)"></div>
-        <div class="field-group"><label>CTA button text</label><input type="text" id="mf-plan2-cta-text" placeholder="Go Monthly"></div>
-        <div class="field-group"><label>CTA URL</label><input type="url" id="mf-plan2-url" placeholder="https://parentdata.org/register/…"></div>
-      </fieldset>
     </div>
   </section>
 
@@ -993,6 +960,12 @@ const LT_DEFAULT_INTRO = "Welcome to The Latest, where I break down current rese
 
 // ── Template selection ──────────────────────────────────────────────────────
 function selectTemplate(type) {
+  // Replace Header & Footer is a separate tool — navigate there
+  if (type === 'replace_hf') {
+    window.location.href = '/replace-header-footer';
+    return;
+  }
+
   currentTemplate = type;
 
   const isQA = type === 'qa';
@@ -1015,7 +988,7 @@ function selectTemplate(type) {
     //   Latest Teaser          → DOCX + Google Doc
     //   (Q&A types have their own areas)
     const showDocx = type === 'latest_teaser' || type === 'website_only';
-    const showGdoc = type === 'standard' || type === 'fertility_digest' || type === 'latest_teaser' || type === 'paid_digest' || type === 'free_digest' || type === 'toddler_article' || type === 'toddler_qa' || type === 'toddler_digest' || type === 'simple' || type === 'marketing_flex' || type === 'website_only' || type === 'baby_send_a' || type === 'baby_send_b' || type === 'baby_qa';
+    const showGdoc = type === 'standard' || type === 'fertility_digest' || type === 'latest_teaser' || type === 'paid_digest' || type === 'free_digest' || type === 'toddler_article' || type === 'toddler_qa' || type === 'toddler_digest' || type === 'simple' || type === 'marketing_digest' || type === 'website_only' || type === 'baby_send_a' || type === 'baby_send_b' || type === 'baby_qa';
     const showWp   = type === 'fertility' || type === 'marketing' || type === 'pregnant_article' || type === 'baby_article';
 
     document.getElementById('docx-upload-row').style.display    = showDocx ? '' : 'none';
@@ -1040,7 +1013,7 @@ function _showPostUploadSections(type) {
   const isToddlerQA = type === 'toddler_qa';
   const isToddlerDigest = type === 'toddler_digest';
   const isSimple = type === 'simple';
-  const isMarketingFlex = type === 'marketing_flex';
+  const isMarketingDigest = type === 'marketing_digest';
   const isWebsiteOnly = type === 'website_only';
   const isBabySendA = type === 'baby_send_a';
   const isBabySendB = type === 'baby_send_b';
@@ -1048,7 +1021,7 @@ function _showPostUploadSections(type) {
   const isBabyQA = type === 'baby_qa';
 
   // Types with dedicated sections hide all standard post-upload sections
-  const showStandardSections = !isQA && !isPregnantQA && !isDigest && !isLatestTeaser && !isPaidDigest && !isToddlerQA && !isToddlerDigest && !isSimple && !isMarketingFlex && !isWebsiteOnly && !isBabySendA && !isBabySendB && !isBabyQA;
+  const showStandardSections = !isQA && !isPregnantQA && !isDigest && !isLatestTeaser && !isPaidDigest && !isToddlerQA && !isToddlerDigest && !isSimple && !isMarketingDigest && !isWebsiteOnly && !isBabySendA && !isBabySendB && !isBabyQA;
 
   // Sections common to standard + fertility + marketing + toddler_article
   ['section-fields', 'section-image', 'section-body', 'section-generate'].forEach(id => {
@@ -1057,7 +1030,7 @@ function _showPostUploadSections(type) {
   });
 
   // Standard-only related reading (also shown for latest_teaser)
-  const showRelated = !isQA && !isPregnantQA && !isFertility && !isMarketing && !isDigest && !isPaidDigest && !isPregnant && !isToddlerArticle && !isToddlerQA && !isToddlerDigest && !isSimple && !isMarketingFlex && !isWebsiteOnly && !isBabySendA && !isBabySendB && !isBabyArticle && !isBabyQA;
+  const showRelated = !isQA && !isPregnantQA && !isFertility && !isMarketing && !isDigest && !isPaidDigest && !isPregnant && !isToddlerArticle && !isToddlerQA && !isToddlerDigest && !isSimple && !isMarketingDigest && !isWebsiteOnly && !isBabySendA && !isBabySendB && !isBabyArticle && !isBabyQA;
   document.getElementById('section-related').style.display = showRelated ? '' : 'none';
   if (showRelated) document.getElementById('section-related').removeAttribute('hidden');
 
@@ -1124,13 +1097,13 @@ function _showPostUploadSections(type) {
   document.getElementById('section-baby-qa').style.display = isBabyQA ? '' : 'none';
   if (isBabyQA) document.getElementById('section-baby-qa').removeAttribute('hidden');
 
+  // Marketing Digest-only
+  document.getElementById('section-marketing-digest').style.display = isMarketingDigest ? '' : 'none';
+  if (isMarketingDigest) document.getElementById('section-marketing-digest').removeAttribute('hidden');
+
   // Simple Email-only
   document.getElementById('section-simple').style.display = isSimple ? '' : 'none';
   if (isSimple) document.getElementById('section-simple').removeAttribute('hidden');
-
-  // Marketing Flex-only
-  document.getElementById('section-mflex').style.display = isMarketingFlex ? '' : 'none';
-  if (isMarketingFlex) document.getElementById('section-mflex').removeAttribute('hidden');
 
   // Website Only sections
   ['section-website-only', 'section-wo-body'].forEach(id => {
@@ -1205,9 +1178,9 @@ async function handleGoogleDocUrl() {
   const url = document.getElementById('gdoc-url').value.trim();
   if (!url) return;
   document.getElementById('file-name').textContent = '';
-  const digestMsg = (currentTemplate === 'fertility_digest' || currentTemplate === 'paid_digest' || currentTemplate === 'free_digest' || currentTemplate === 'toddler_digest' || currentTemplate === 'toddler_article' || currentTemplate === 'toddler_qa' || currentTemplate === 'baby_qa')
+  const digestMsg = (currentTemplate === 'fertility_digest' || currentTemplate === 'paid_digest' || currentTemplate === 'free_digest' || currentTemplate === 'marketing_digest' || currentTemplate === 'toddler_digest' || currentTemplate === 'toddler_article' || currentTemplate === 'toddler_qa' || currentTemplate === 'baby_qa')
     ? 'Downloading Google Doc, extracting article links, and fetching article metadata… this may take 30–60 seconds.'
-    : currentTemplate === 'simple' || currentTemplate === 'marketing_flex'
+    : currentTemplate === 'simple'
     ? 'Downloading Google Doc and extracting content…'
     : currentTemplate === 'website_only'
     ? 'Downloading Google Doc and extracting metadata + body…'
@@ -1288,7 +1261,7 @@ async function _submitUpload(formData) {
     const isToddlerQA = currentTemplate === 'toddler_qa';
     const isToddlerDigest = currentTemplate === 'toddler_digest';
     const isSimple = currentTemplate === 'simple';
-    const isMarketingFlex = currentTemplate === 'marketing_flex';
+    const isMarketingDigest = currentTemplate === 'marketing_digest';
     const isWebsiteOnly = currentTemplate === 'website_only';
     const isBabySendA = currentTemplate === 'baby_send_a';
     const isBabySendB = currentTemplate === 'baby_send_b';
@@ -1310,8 +1283,8 @@ async function _submitUpload(formData) {
       populateBabyQAFields(data);
     } else if (isWebsiteOnly) {
       populateWebsiteOnlyFields(data);
-    } else if (isMarketingFlex) {
-      populateMarketingFlexFields(data);
+    } else if (isMarketingDigest) {
+      populateMarketingDigestFields(data);
     } else if (isSimple) {
       populateSimpleFields(data);
     } else if (isToddlerArticle) {
@@ -1374,113 +1347,62 @@ function populateSimpleFields(data) {
   document.getElementById('simple-button-url').value = data.button_url || '';
 }
 
-// ── Marketing Flex helpers ──────────────────────────────────────────────────
-function populateMarketingFlexFields(data) {
-  document.getElementById('mf-body').value = data.pre_button_html || data.article_body_html || '';
+// ── Marketing Digest helpers ────────────────────────────────────────────────
+let _mdArticles = [];
+
+function populateMarketingDigestFields(data) {
+  const articles = data.articles || [];
+  _mdArticles = articles;
+  const count = Math.min(Math.max(articles.length, 3), 5);
+  const radio = document.querySelector(`input[name="md-card-count"][value="${count}"]`);
+  if (radio) radio.checked = true;
+  buildMarketingDigestCards(articles, count);
 }
 
-let _mfButtonCount = 1;
-
-function addMfButton() {
-  if (_mfButtonCount >= 3) return;
-  const i = _mfButtonCount;
-  const container = document.getElementById('mf-buttons-container');
-  const row = document.createElement('div');
-  row.className = 'mf-button-row';
-  row.dataset.index = i;
-  row.style.cssText = 'border:1px solid #e0e0e0;border-radius:8px;padding:12px;margin-bottom:8px;';
-  row.innerHTML = `
-    <div style="display:flex;gap:8px;margin-bottom:6px;">
-      <input type="text" id="mf-btn-label-${i}" placeholder="Button label" style="flex:1;">
-      <input type="url" id="mf-btn-url-${i}" placeholder="https://…" style="flex:1;">
-      <button type="button" onclick="removeMfButton(${i})" style="padding:2px 8px;font-size:12px;cursor:pointer;">✕</button>
-    </div>
-    <div style="display:flex;gap:16px;flex-wrap:wrap;">
-      <label style="font-weight:400;display:flex;align-items:center;gap:4px;">
-        <input type="radio" name="mf-btn-style-${i}" value="pill" checked> Pill
-      </label>
-      <label style="font-weight:400;display:flex;align-items:center;gap:4px;">
-        <input type="radio" name="mf-btn-style-${i}" value="minimal"> Minimal
-      </label>
-      <label style="font-weight:400;display:flex;align-items:center;gap:4px;">
-        <input type="radio" name="mf-btn-color-${i}" value="yellow" checked> Yellow
-      </label>
-      <label style="font-weight:400;display:flex;align-items:center;gap:4px;">
-        <input type="radio" name="mf-btn-color-${i}" value="white"> White
-      </label>
-    </div>`;
-  container.appendChild(row);
-  _mfButtonCount++;
-  if (_mfButtonCount >= 3) document.getElementById('mf-add-btn').style.display = 'none';
-}
-
-function removeMfButton(index) {
-  const row = document.querySelector(`.mf-button-row[data-index="${index}"]`);
-  if (row) row.remove();
-  document.getElementById('mf-add-btn').style.display = '';
-}
-
-function toggleMfPricing(checked) {
-  document.getElementById('mf-pricing-fields').style.display = checked ? '' : 'none';
-}
-
-function toggleMfDualPricing() {
-  const mode = document.querySelector('input[name="mf-pricing-mode"]:checked').value;
-  document.getElementById('mf-card2').style.display = mode === 'dual' ? '' : 'none';
-}
-
-function buildMarketingFlexPayload() {
-  const buttons = [];
-  document.querySelectorAll('.mf-button-row').forEach(row => {
-    const i = row.dataset.index;
-    const label = document.getElementById(`mf-btn-label-${i}`);
-    const url = document.getElementById(`mf-btn-url-${i}`);
-    const styleEl = document.querySelector(`input[name="mf-btn-style-${i}"]:checked`);
-    const colorEl = document.querySelector(`input[name="mf-btn-color-${i}"]:checked`);
-    if (label && url) {
-      buttons.push({
-        label: label.value,
-        url: url.value,
-        style: styleEl ? styleEl.value : 'pill',
-        color: colorEl ? colorEl.value : 'yellow',
-      });
-    }
-  });
-
-  const payload = {
-    template_type: 'marketing_flex',
-    title: document.getElementById('mf-title').value,
-    pre_button_html: document.getElementById('mf-body').value,
-    buttons: buttons,
-    show_pricing: document.getElementById('mf-show-pricing').checked,
-    pricing_mode: document.querySelector('input[name="mf-pricing-mode"]:checked').value,
-    pricing_cards: [],
-  };
-
-  if (payload.show_pricing) {
-    payload.pricing_cards.push({
-      plan_name: document.getElementById('mf-plan1-name').value,
-      old_price: document.getElementById('mf-plan1-old').value,
-      new_price: document.getElementById('mf-plan1-new').value,
-      per_unit: document.getElementById('mf-plan1-per').value,
-      badge: document.getElementById('mf-plan1-badge').value,
-      cta_text: document.getElementById('mf-plan1-cta-text').value,
-      cta_url: document.getElementById('mf-plan1-url').value,
-    });
-    if (payload.pricing_mode === 'dual') {
-      payload.pricing_cards.push({
-        plan_name: document.getElementById('mf-plan2-name').value,
-        old_price: document.getElementById('mf-plan2-old').value,
-        new_price: document.getElementById('mf-plan2-new').value,
-        per_unit: document.getElementById('mf-plan2-per').value,
-        badge: document.getElementById('mf-plan2-badge').value,
-        cta_text: document.getElementById('mf-plan2-cta-text').value,
-        cta_url: document.getElementById('mf-plan2-url').value,
-      });
-    }
+function buildMarketingDigestCards(articles, visibleCount) {
+  const container = document.getElementById('marketing-digest-cards');
+  container.innerHTML = '';
+  for (let i = 0; i < 5; i++) {
+    const a = articles[i] || {};
+    const hidden = i >= visibleCount ? ' style="display:none;"' : '';
+    container.innerHTML += `
+      <div class="md-card-group" data-card="${i}"${hidden}>
+        <h3 style="margin:16px 0 8px;font-size:15px;font-weight:600;">Article ${i + 1}</h3>
+        <div class="field-group">
+          <label>Title</label>
+          <input type="text" id="md-art-title-${i}" value="${(a.title || '').replace(/"/g, '&quot;')}">
+        </div>
+        <div class="field-group">
+          <label>Subtitle</label>
+          <input type="text" id="md-art-subtitle-${i}" value="${(a.subtitle || '').replace(/"/g, '&quot;')}">
+        </div>
+        <div class="field-group">
+          <label>URL</label>
+          <input type="url" id="md-art-url-${i}" value="${a.url || ''}">
+        </div>
+        <div class="field-group">
+          <label>Image URL</label>
+          <input type="url" id="md-art-img-${i}" value="${a.image_url || ''}">
+        </div>
+        <div class="field-group">
+          <label>Image Alt</label>
+          <input type="text" id="md-art-imgalt-${i}" value="${(a.image_alt || '').replace(/"/g, '&quot;')}">
+        </div>
+      </div>`;
   }
+}
 
-  return payload;
+function updateMdCardVisibility() {
+  const count = parseInt(document.querySelector('input[name="md-card-count"]:checked').value);
+  for (let i = 0; i < 5; i++) {
+    const el = document.querySelector(`.md-card-group[data-card="${i}"]`);
+    if (el) el.style.display = i < count ? '' : 'none';
+  }
+}
+
+function toggleMdPromo() {
+  document.getElementById('md-promo-fields').style.display =
+    document.getElementById('md-show-promo').checked ? '' : 'none';
 }
 
 // Store qa_authors from upload response for use at generate time
@@ -1974,7 +1896,6 @@ async function generateEmail() {
   const isToddlerQA = currentTemplate === 'toddler_qa';
   const isToddlerDigest = currentTemplate === 'toddler_digest';
   const isSimple = currentTemplate === 'simple';
-  const isMarketingFlex = currentTemplate === 'marketing_flex';
   const isWebsiteOnly = currentTemplate === 'website_only';
   const isBabySendA = currentTemplate === 'baby_send_a';
   const isBabySendB = currentTemplate === 'baby_send_b';
@@ -2076,8 +1997,6 @@ async function generateEmail() {
     // Website Only: go directly to WordPress (no email generation)
     await stageToWordPress();
     return;
-  } else if (isMarketingFlex) {
-    payload = buildMarketingFlexPayload();
   } else if (isSimple) {
     payload = {
       template_type: 'simple',
@@ -2085,6 +2004,34 @@ async function generateEmail() {
       post_button_html: document.getElementById('simple-post-button').value,
       button_text: document.getElementById('simple-button-text').value,
       button_url: document.getElementById('simple-button-url').value,
+    };
+  } else if (currentTemplate === 'marketing_digest') {
+    const cardCount = parseInt(document.querySelector('input[name="md-card-count"]:checked').value);
+    const articles = [];
+    for (let i = 0; i < cardCount; i++) {
+      articles.push({
+        title:     document.getElementById(`md-art-title-${i}`).value,
+        subtitle:  document.getElementById(`md-art-subtitle-${i}`).value,
+        url:       document.getElementById(`md-art-url-${i}`).value,
+        image_url: document.getElementById(`md-art-img-${i}`).value,
+        image_alt: document.getElementById(`md-art-imgalt-${i}`).value,
+      });
+    }
+    const showPromo = document.getElementById('md-show-promo').checked;
+    payload = {
+      template_type: 'marketing_digest',
+      articles: articles,
+      card_count: cardCount,
+      show_promo_banner: showPromo,
+      promo: showPromo ? {
+        headline:   document.getElementById('md-promo-headline').value,
+        plan_name:  document.getElementById('md-promo-plan').value,
+        old_price:  document.getElementById('md-promo-old-price').value,
+        new_price:  document.getElementById('md-promo-new-price').value,
+        fine_print: document.getElementById('md-promo-fine-print').value,
+        cta_text:   document.getElementById('md-promo-cta-text').value,
+        cta_url:    document.getElementById('md-promo-cta-url').value,
+      } : {},
     };
   } else if (isToddlerArticle) {
     const subtitleLines = document.getElementById('f-subtitle').value

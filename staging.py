@@ -60,6 +60,14 @@ TEMPLATES = {
         'has_related_reading': False,
         'has_bottom_line': False,
     },
+    'marketing_digest': {
+        'label': 'Marketing - Digest Send',
+        'file': BASE_DIR / 'email_templates' / 'template_marketingdigest.html',
+        'has_welcome': False,
+        'has_author_block': False,
+        'has_related_reading': False,
+        'has_bottom_line': False,
+    },
     'fertility_digest': {
         'label': 'Fertility Digest',
         'file': BASE_DIR / 'email_templates' / 'template_fertilitydigest.html',
@@ -166,14 +174,6 @@ TEMPLATES = {
     'simple': {
         'label': 'Simple Email',
         'file': BASE_DIR / 'email_templates' / 'template_simple.html',
-        'has_welcome': False,
-        'has_author_block': False,
-        'has_related_reading': False,
-        'has_bottom_line': False,
-    },
-    'marketing_flex': {
-        'label': 'Marketing - Flex',
-        'file': BASE_DIR / 'email_templates' / 'template_marketingflex.html',
         'has_welcome': False,
         'has_author_block': False,
         'has_related_reading': False,
@@ -588,10 +588,6 @@ def _process_docx(tmp_path: str, template_type: str = 'standard') -> dict:
             'articles':   articles,
         }
 
-    if template_type == 'marketing_flex':
-        from docx_parser import parse_simple_docx
-        return parse_simple_docx(tmp_path)
-
     if template_type == 'simple':
         from docx_parser import parse_simple_docx
         return parse_simple_docx(tmp_path)
@@ -619,6 +615,33 @@ def _process_docx(tmp_path: str, template_type: str = 'standard') -> dict:
                         article.setdefault('image_alt', '')
 
         return {'sections': sections}
+
+    if template_type == 'marketing_digest':
+        from docx_parser import parse_paid_digest_docx
+        from wp_fetcher import fetch_article_metadata
+
+        digest = parse_paid_digest_docx(tmp_path)
+        # Flatten all articles across sections into a single list
+        all_articles = []
+        for section in digest.get('sections', []):
+            for article in section.get('articles', []):
+                all_articles.append(article)
+
+        for article in all_articles:
+            if article.get('url'):
+                try:
+                    meta = fetch_article_metadata(article['url'])
+                    article['title'] = meta.get('title', '')
+                    article['subtitle'] = meta.get('subtitle', '')
+                    article['image_url'] = meta.get('image_url', '')
+                    article['image_alt'] = meta.get('image_alt', '') or meta.get('title', '')
+                except Exception:
+                    article.setdefault('title', '')
+                    article.setdefault('subtitle', '')
+                    article.setdefault('image_url', '')
+                    article.setdefault('image_alt', '')
+
+        return {'articles': all_articles}
 
     if template_type == 'baby_send_a':
         from docx_parser import parse_baby_send_a_docx
