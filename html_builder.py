@@ -1409,13 +1409,14 @@ def _inject_baby_article(soup, fields):
 
 
 def _update_baby_featured_image(soup, fields):
-    """Set the featured image src in the baby article template."""
-    img_url = fields.get('featured_image_url', '')
-    img_alt = _escape_attr(fields.get('featured_image_alt', ''))
+    """Remove the template placeholder image (above the bottom line) so the
+    featured image can be injected into the article body instead."""
     img = soup.find('img', attrs={'alt': 'Article Image'})
-    if img and img_url:
-        img['src'] = img_url
-        img['alt'] = img_alt
+    if img:
+        # Remove the entire <tr> that holds the placeholder image
+        tr = img.find_parent('tr')
+        if tr:
+            tr.decompose()
 
 
 def _update_baby_subtitle_author(soup, fields):
@@ -1471,7 +1472,8 @@ def _update_baby_bottom_line(soup, fields):
 
 
 def _replace_baby_article_body(soup, fields):
-    """Replace the article body content in the white body section."""
+    """Replace the article body content in the white body section and
+    inject the featured image before the first H2."""
     body_html = fields.get('article_body_html', '')
     if not body_html:
         return
@@ -1487,7 +1489,28 @@ def _replace_baby_article_body(soup, fields):
     if not target_td:
         return
     target_td.clear()
-    target_td.append(BeautifulSoup(body_html, 'html.parser'))
+    body_soup = BeautifulSoup(body_html, 'html.parser')
+
+    # Inject featured image before the first H2
+    img_url = fields.get('featured_image_url', '')
+    img_alt = _escape_attr(fields.get('featured_image_alt', ''))
+    if img_url:
+        img_el = BeautifulSoup(
+            f'<div style="position: relative; display: inline-block; width: 100%; margin-bottom: 24px;">'
+            f'<img alt="{img_alt}" class="fluid"'
+            f' src="{img_url}" width="552" height="auto"'
+            f' style="width: 100%; max-width: 552px; height: auto; display: block; border-radius: 16px;">'
+            f'</div>',
+            'html.parser',
+        )
+        first_h2 = body_soup.find('h2')
+        if first_h2:
+            first_h2.insert_before(img_el)
+        else:
+            # No H2 — append at the end of the body
+            body_soup.append(img_el)
+
+    target_td.append(body_soup)
 
 
 # ── Baby Q&A ────────────────────────────────────────────────────────────────
@@ -3107,16 +3130,6 @@ def replace_header_footer(html: str, title: str = '', subtitle: str = '') -> str
                 )
                 sub_td.append(new_p)
             new_header.insert_after(hero)
-            insert_after = hero
-        else:
-            insert_after = new_header
-
-        # Add spacer row between header/hero and the article content
-        spacer = BeautifulSoup(
-            '<tr><td style="height:24px; font-size:0; line-height:0;">&nbsp;</td></tr>',
-            'html.parser',
-        ).find('tr')
-        insert_after.insert_after(spacer)
 
     # Replace footer: find the <tr> containing the Footer Logo
     input_footer_logo = soup.find('img', alt='Footer Logo')
