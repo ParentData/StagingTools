@@ -2210,13 +2210,16 @@ def _replace_marketing_body(soup, fields):
 
     # Strip ANY image that matches the featured image from the body HTML,
     # so we can insert it exactly once in the right position.
+    # WP often has variants like image-copy.png, image-copy-2.png,
+    # image-800x600.png — we match on the core stem.
     raw_url = fields.get('featured_image_url', '')
     if raw_url:
-        # Derive base filename stem for fuzzy matching (handles WP size variants)
         _fname = raw_url.rstrip('/').rsplit('/', 1)[-1]
-        _stem = re.sub(r'-\d+x\d+(\.[a-z0-9]+)$', r'\1', _fname, flags=re.I)
-        _stem = re.sub(r'\.[a-z0-9]+$', '', _stem, flags=re.I)
-        if _stem:
+        # Strip extension, WP size suffix, and -copy/-copy-N suffix
+        _stem = re.sub(r'\.[a-z0-9]+$', '', _fname, flags=re.I)
+        _stem = re.sub(r'-\d+x\d+$', '', _stem)
+        _stem = re.sub(r'-copy(?:-\d+)?$', '', _stem)
+        if _stem and len(_stem) > 5:
             body_soup = BeautifulSoup(article_body_html, 'html.parser')
             for img in body_soup.find_all('img'):
                 if _stem in img.get('src', ''):
