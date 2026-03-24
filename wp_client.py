@@ -724,7 +724,7 @@ def partial_restage(fields: dict) -> dict:
     if not content.strip():
         raise ValueError('No article body to publish')
 
-    return update_post(post_id, content=content)
+    return update_post(post_id, status='draft', content=content)
 
 
 def _extract_graphs_from_post(post_id: int) -> list:
