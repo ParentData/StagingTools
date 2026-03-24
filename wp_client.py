@@ -71,6 +71,20 @@ def strip_email_styles(
 
     soup = BeautifulSoup(html, 'html.parser')
 
+    # Remove "[Take me to the Bottom line]" placeholder text — the button
+    # handles this link, so the text should not appear in the article body.
+    import re as _re
+    for el in soup.find_all(string=_re.compile(r'\[Take me to the [Bb]ottom [Ll]ine\]')):
+        # If it's the only content in its parent <p>, remove the whole <p>
+        parent = el.parent
+        cleaned = _re.sub(r'\s*\[Take me to the [Bb]ottom [Ll]ine\]\s*', '', str(el))
+        if cleaned.strip():
+            el.replace_with(cleaned)
+        elif parent and parent.name in ('p', 'a') and not parent.get_text(strip=True).replace('[Take me to the Bottom line]', '').replace('[Take me to the bottom line]', '').strip():
+            parent.decompose()
+        else:
+            el.replace_with('')
+
     # Clean all tags: strip style/class, unwrap spans inside links
     for tag in soup.find_all(True):
         tag.attrs = {
@@ -82,6 +96,15 @@ def strip_email_styles(
     for a_tag in soup.find_all('a'):
         for span in a_tag.find_all('span'):
             span.unwrap()
+
+    # Ensure a space exists before inline <a> tags — unwrapping spans and
+    # stripping styles can collapse the whitespace between text and links.
+    for a_tag in soup.find_all('a'):
+        prev = a_tag.previous_sibling
+        if prev and isinstance(prev, NavigableString):
+            text = str(prev)
+            if text and not text.endswith((' ', '\n', '\t')):
+                prev.replace_with(text + ' ')
 
     # Build block output from top-level elements
     blocks = []
@@ -503,6 +526,7 @@ def update_post(post_id: int, **fields) -> dict:
     """Update an existing WordPress post. Only non-empty fields are sent."""
     payload = {}
     field_map = {
+        'status': 'status',
         'title': 'title',
         'content': 'content',
         'excerpt': 'excerpt',
@@ -655,6 +679,7 @@ def publish_or_update(fields: dict) -> dict:
             meta['rank_math_focus_keyword'] = focus_kw
         return update_post(
             post_id,
+            status='draft',
             title=prepared['title'],
             content=prepared['content'],
             excerpt=wp_meta.get('excerpt', ''),

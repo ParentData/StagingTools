@@ -1079,7 +1079,7 @@ function selectTemplate(type) {
     //   Toddler Digest         → Google Doc only
     //   Latest Teaser          → DOCX + Google Doc
     //   (Q&A types have their own areas)
-    const showDocx = type === 'latest_teaser' || type === 'website_only';
+    const showDocx = type === 'latest_teaser';
     const showGdoc = type === 'standard' || type === 'fertility_digest' || type === 'latest_teaser' || type === 'paid_digest' || type === 'free_digest' || type === 'toddler_article' || type === 'toddler_qa' || type === 'toddler_digest' || type === 'simple' || type === 'marketing_digest' || type === 'website_only' || type === 'baby_send_a' || type === 'baby_send_b' || type === 'baby_qa';
     const showWp   = type === 'fertility' || type === 'marketing' || type === 'pregnant_article' || type === 'baby_article';
 
