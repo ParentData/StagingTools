@@ -2208,6 +2208,20 @@ def _replace_marketing_body(soup, fields):
     article_body_html = fields.get('article_body_html', '')
     article_url = _escape_attr(fields.get('article_url', '#'))
 
+    # Strip the featured image from the body HTML if it's already there —
+    # we insert it as a separate row, so having it in the body duplicates it.
+    if featured_image_url:
+        body_soup = BeautifulSoup(article_body_html, 'html.parser')
+        for img in body_soup.find_all('img'):
+            if img.get('src', '') == fields.get('featured_image_url', ''):
+                # Remove the img and its wrapping <p> or <div> if it's the only child
+                parent = img.parent
+                img.decompose()
+                if parent and parent.name in ('p', 'div') and not parent.get_text(strip=True):
+                    parent.decompose()
+                break
+        article_body_html = str(body_soup)
+
     # Split body at first heading so image goes between intro text and first section
     intro_html, main_html = _split_at_first_heading(article_body_html)
 
