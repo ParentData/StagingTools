@@ -2208,22 +2208,25 @@ def _replace_marketing_body(soup, fields):
     article_body_html = fields.get('article_body_html', '')
     article_url = _escape_attr(fields.get('article_url', '#'))
 
-    # Strip the featured image from the body HTML if it's already there —
-    # we insert it as a separate row, so having it in the body duplicates it.
-    if featured_image_url:
-        body_soup = BeautifulSoup(article_body_html, 'html.parser')
-        for img in body_soup.find_all('img'):
-            if img.get('src', '') == fields.get('featured_image_url', ''):
-                # Remove the img and its wrapping <p> or <div> if it's the only child
-                parent = img.parent
-                img.decompose()
-                if parent and parent.name in ('p', 'div') and not parent.get_text(strip=True):
-                    parent.decompose()
-                break
-        article_body_html = str(body_soup)
-
     # Split body at first heading so image goes between intro text and first section
     intro_html, main_html = _split_at_first_heading(article_body_html)
+
+    # If the body already contains the featured image (from Claude extraction),
+    # don't insert a separate featured image row — it would duplicate.
+    body_has_featured = (
+        featured_image_url
+        and featured_image_url in article_body_html
+    )
+    # If the body doesn't have it, inject it between intro and main
+    if not body_has_featured and featured_image_url:
+        img_block = (
+            f'<div style="text-align:center;margin:16px 0;">'
+            f'<img src="{featured_image_url}" alt="{featured_image_alt}"'
+            f' style="display:block;width:100%;max-width:520px;height:auto;'
+            f'border-radius:20px;margin:0 auto;" class="fluid">'
+            f'</div>'
+        )
+        intro_html = intro_html + img_block if intro_html else img_block
 
     def _body_row(content_html):
         return (
@@ -2233,16 +2236,6 @@ def _replace_marketing_body(soup, fields):
             f'{content_html}'
             f'</td></tr></tbody></table></td></tr>'
         )
-
-    featured_image_row_html = (
-        f'<tr><td class="table-box-mobile no-top-pad" style="background-color:#fff;padding:0 48px;">'
-        f'<table border="0" cellpadding="0" cellspacing="0" role="presentation" width="100%">'
-        f'<tbody><tr><td style="text-align:center;">'
-        f'<img src="{featured_image_url}" alt="{featured_image_alt}"'
-        f' style="display:block;width:100%;max-width:520px;height:auto;border-radius:20px;margin:0 auto;"'
-        f' class="fluid">'
-        f'</td></tr></tbody></table></td></tr>'
-    )
 
     leave_comment_row_html = (
         f'<tr><td class="table-box-mobile no-top-pad" style="background-color:#fff;padding:0 48px 40px;">'
@@ -2262,9 +2255,10 @@ def _replace_marketing_body(soup, fields):
         return BeautifulSoup(html, 'html.parser').find('tr')
 
     # Insert in reverse order so the final document order is correct
+    # Final order: [intro+image] → main_body → leave_comment
     upgrade_row.insert_after(_parsed_tr(leave_comment_row_html))
-    upgrade_row.insert_after(_parsed_tr(_body_row(main_html)))
-    upgrade_row.insert_after(_parsed_tr(featured_image_row_html))
+    if main_html:
+        upgrade_row.insert_after(_parsed_tr(_body_row(main_html)))
     if intro_html:
         upgrade_row.insert_after(_parsed_tr(_body_row(intro_html)))
 
