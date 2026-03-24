@@ -93,9 +93,10 @@ def strip_email_styles(
                      'data-src', 'data-alt')
         }
 
-    for a_tag in soup.find_all('a'):
-        for span in a_tag.find_all('span'):
-            span.unwrap()
+    # Unwrap all <span> tags — they're artifacts of email styling and can
+    # cause font-size issues in WordPress (especially in list items).
+    for span in soup.find_all('span'):
+        span.unwrap()
 
     # Ensure a space exists before inline <a> tags — unwrapping spans and
     # stripping styles can collapse the whitespace between text and links.
