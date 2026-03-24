@@ -374,8 +374,16 @@ def parse_marketing_digest_docx(file_path: str) -> dict:
             text = el.get_text() if hasattr(el, 'get_text') else str(el)
             if url_re.search(text):
                 break
-            # Skip heading-like "Intro Text" label
+            # Skip element if it's just "Intro Text" (with or without colon)
             if skip_re.match(text.strip()):
+                continue
+            # Also strip "Intro Text:" prefix from the start of a paragraph
+            if hasattr(el, 'get_text') and re.match(r'^\s*Intro\s+Text\s*:\s*', text, re.I):
+                # Remove the label prefix from the HTML
+                html_str = str(el)
+                html_str = re.sub(r'Intro\s+Text\s*:\s*', '', html_str, count=1, flags=re.I)
+                if html_str.strip():
+                    intro_parts.append(html_str)
                 continue
             intro_parts.append(str(el))
         intro_html = ''.join(intro_parts)
