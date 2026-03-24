@@ -2208,17 +2208,29 @@ def _replace_marketing_body(soup, fields):
     article_body_html = fields.get('article_body_html', '')
     article_url = _escape_attr(fields.get('article_url', '#'))
 
+    # Strip ANY image that matches the featured image from the body HTML,
+    # so we can insert it exactly once in the right position.
+    raw_url = fields.get('featured_image_url', '')
+    if raw_url:
+        # Derive base filename stem for fuzzy matching (handles WP size variants)
+        _fname = raw_url.rstrip('/').rsplit('/', 1)[-1]
+        _stem = re.sub(r'-\d+x\d+(\.[a-z0-9]+)$', r'\1', _fname, flags=re.I)
+        _stem = re.sub(r'\.[a-z0-9]+$', '', _stem, flags=re.I)
+        if _stem:
+            body_soup = BeautifulSoup(article_body_html, 'html.parser')
+            for img in body_soup.find_all('img'):
+                if _stem in img.get('src', ''):
+                    parent = img.parent
+                    img.decompose()
+                    if parent and parent.name in ('p', 'div', 'figure') and not parent.get_text(strip=True):
+                        parent.decompose()
+            article_body_html = str(body_soup)
+
     # Split body at first heading so image goes between intro text and first section
     intro_html, main_html = _split_at_first_heading(article_body_html)
 
-    # If the body already contains the featured image (from Claude extraction),
-    # don't insert a separate featured image row — it would duplicate.
-    body_has_featured = (
-        featured_image_url
-        and featured_image_url in article_body_html
-    )
-    # If the body doesn't have it, inject it between intro and main
-    if not body_has_featured and featured_image_url:
+    # Insert featured image between intro and main content
+    if featured_image_url:
         img_block = (
             f'<div style="text-align:center;margin:16px 0;">'
             f'<img src="{featured_image_url}" alt="{featured_image_alt}"'
