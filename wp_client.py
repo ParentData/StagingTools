@@ -478,6 +478,8 @@ def create_draft(
     # Set Rank Math SEO fields via the Rank Math API (the WP post meta
     # endpoint silently drops unregistered rank_math_* keys)
     rank_meta = {}
+    if title:
+        rank_meta['rank_math_title'] = title
     if meta_description:
         rank_meta['rank_math_description'] = meta_description
     if focus_keyword:
@@ -753,6 +755,8 @@ def publish_or_update(fields: dict) -> dict:
         if not post_id:
             raise ValueError(f'Could not find post for URL: {original_url}')
         meta = {}
+        if prepared.get('title'):
+            meta['rank_math_title'] = prepared['title']
         if wp_meta.get('meta_description'):
             meta['rank_math_description'] = wp_meta['meta_description']
         # Power keywords from the doc override Claude-generated focus keyword
