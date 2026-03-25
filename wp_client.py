@@ -459,6 +459,7 @@ def create_draft(
         payload['excerpt'] = excerpt
     if subtitle:
         payload['acf'] = {'sub_title': subtitle}
+        payload.setdefault('meta', {})['sub_title'] = subtitle
     if slug:
         payload['slug'] = slug
     if featured_media_id:
@@ -520,30 +521,25 @@ def _set_post_subtitle(post_id: int, subtitle: str) -> None:
     if not subtitle:
         return
     # The subtitle is an ACF field (data-name="sub_title", key="field_64ff6de8af157").
-    # ACF fields can be set via the REST API using the acf namespace.
-    try:
-        resp = _session.post(
-            f'{WP_API}/posts/{post_id}',
-            json={'acf': {'sub_title': subtitle}},
-            auth=_wp_auth(),
-            timeout=10,
-        )
-        resp.raise_for_status()
-        print(f'[wp_client] Subtitle set for post {post_id} via acf.sub_title')
-    except Exception as e:
-        print(f'[wp_client] Warning: failed to set subtitle via ACF: {e}')
-        # Fallback: try setting via meta with the ACF field key
+    # Try multiple approaches since the REST API config varies by site.
+    approaches = [
+        ('acf', {'acf': {'sub_title': subtitle}}),
+        ('meta sub_title', {'meta': {'sub_title': subtitle}}),
+        ('meta _sub_title', {'meta': {'_sub_title': subtitle}}),
+        ('fields', {'fields': {'sub_title': subtitle}}),
+    ]
+    for label, payload in approaches:
         try:
             resp = _session.post(
                 f'{WP_API}/posts/{post_id}',
-                json={'meta': {'sub_title': subtitle}},
+                json=payload,
                 auth=_wp_auth(),
                 timeout=10,
             )
             resp.raise_for_status()
-            print(f'[wp_client] Subtitle set for post {post_id} via meta.sub_title')
-        except Exception as e2:
-            print(f'[wp_client] Warning: failed to set subtitle via meta: {e2}')
+            print(f'[wp_client] Subtitle attempt ({label}) for post {post_id}: {resp.status_code}')
+        except Exception as e:
+            print(f'[wp_client] Subtitle attempt ({label}) failed: {e}')
 
 
 def resolve_post_id(url: str) -> int | None:
