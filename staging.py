@@ -398,6 +398,8 @@ def _process_docx(tmp_path: str, template_type: str = 'standard') -> dict:
             ] if staging.get('graphs') else [],
             'featured_image_url': staging.get('featured_image_url', ''),
             'featured_image_alt': staging.get('featured_image_alt', ''),
+            'meta_title':         parsed.get('detected_meta_title', ''),
+            'meta_description':   parsed.get('detected_meta_description', ''),
         }
 
     if template_type == 'latest_teaser':

@@ -448,6 +448,7 @@ def find_coauthor(name: str) -> int | None:
 def create_draft(
     title, content, excerpt='', slug='', subtitle='',
     featured_image_alt='', photo_credit='',
+    meta_title='',
     featured_media_id=0,
     category_ids=None, post_topic_ids=None, post_type_ids=None,
     coauthor_ids=None, meta_description='', focus_keyword='',
@@ -478,8 +479,8 @@ def create_draft(
     # Set Rank Math SEO fields via the Rank Math API (the WP post meta
     # endpoint silently drops unregistered rank_math_* keys)
     rank_meta = {}
-    if title:
-        rank_meta['rank_math_title'] = title
+    if meta_title or title:
+        rank_meta['rank_math_title'] = meta_title or title
     if meta_description:
         rank_meta['rank_math_description'] = meta_description
     if focus_keyword:
@@ -677,6 +678,14 @@ def _prepare_post_fields(fields: dict) -> dict:
     raw_text = BeautifulSoup(body_html, 'html.parser').get_text(' ', strip=True)
     wp_meta = generate_wp_meta(raw_text, title)
 
+    # Override Claude-generated meta with values from the doc if provided
+    doc_meta_title = fields.get('meta_title', '')
+    doc_meta_desc = fields.get('meta_description', '')
+    if doc_meta_title:
+        wp_meta['meta_title'] = doc_meta_title
+    if doc_meta_desc:
+        wp_meta['meta_description'] = doc_meta_desc
+
     featured_media_id = 0
     if featured_url:
         try:
@@ -755,8 +764,9 @@ def publish_or_update(fields: dict) -> dict:
         if not post_id:
             raise ValueError(f'Could not find post for URL: {original_url}')
         meta = {}
-        if prepared.get('title'):
-            meta['rank_math_title'] = prepared['title']
+        seo_title = wp_meta.get('meta_title', '') or prepared.get('title', '')
+        if seo_title:
+            meta['rank_math_title'] = seo_title
         if wp_meta.get('meta_description'):
             meta['rank_math_description'] = wp_meta['meta_description']
         # Power keywords from the doc override Claude-generated focus keyword
@@ -857,6 +867,7 @@ def _create_draft_from_prepared(prepared: dict) -> dict:
         subtitle=prepared.get('subtitle', ''),
         featured_image_alt=prepared.get('featured_image_alt', ''),
         photo_credit=prepared.get('photo_credit', ''),
+        meta_title=wp_meta.get('meta_title', ''),
         featured_media_id=prepared['featured_media_id'],
         category_ids=prepared['category_ids'],
         post_topic_ids=prepared['post_topic_ids'],

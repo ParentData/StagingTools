@@ -974,6 +974,16 @@
         <input type="text" id="wo-photo-credit" placeholder="e.g. Getty Images">
       </div>
 
+      <div class="field-group">
+        <label for="wo-meta-title">Meta Title (Rank Math)</label>
+        <input type="text" id="wo-meta-title" placeholder="SEO title for search results">
+      </div>
+
+      <div class="field-group">
+        <label for="wo-meta-desc">Meta Description (Rank Math)</label>
+        <input type="text" id="wo-meta-desc" placeholder="SEO description under 155 chars">
+      </div>
+
       <div class="field-group image-url-field">
         <label for="wo-img-url">Featured Image URL <span class="required">*</span></label>
         <input type="url" id="wo-img-url" placeholder="https://parentdata.org/wp-content/uploads/…">
@@ -1776,6 +1786,8 @@ function populateWebsiteOnlyFields(data) {
   document.getElementById('wo-tags').value = (data.topic_tags || []).join(', ');
   document.getElementById('wo-age-groups').value = (data.age_groups || []).join(', ');
   document.getElementById('wo-photo-credit').value = data.photo_credit || '';
+  document.getElementById('wo-meta-title').value = data.meta_title || '';
+  document.getElementById('wo-meta-desc').value = data.meta_description || '';
   document.getElementById('wo-original-url').value = data.original_url || '';
   document.getElementById('wo-img-url').value = data.featured_image_url || '';
   document.getElementById('wo-img-alt').value = data.featured_image_alt || '';
@@ -2540,6 +2552,8 @@ async function stageToWordPress() {
       featured_image_url: document.getElementById('wo-img-url').value,
       featured_image_alt: document.getElementById('wo-img-alt').value,
       photo_credit: document.getElementById('wo-photo-credit').value,
+      meta_title: document.getElementById('wo-meta-title').value,
+      meta_description: document.getElementById('wo-meta-desc').value,
       author_name: document.getElementById('wo-author-name').value,
       topic_tags: topicTags,
       age_groups: ageGroups,

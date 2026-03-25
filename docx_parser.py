@@ -13,15 +13,17 @@ from docx import Document
 
 # Regex patterns for labeled metadata lines
 LABEL_PATTERNS = {
-    'title':           r'^title\s*:\s*(.+)$',
-    'subtitle':        r'^subtitle\s*:\s*(.+)$',
-    'author_name':     r'^author(?:\s+name)?\s*:\s*(.+)$',
-    'author_title':    r'^author\s+title\s*:\s*(.+)$',
-    'topic_tags':      r'^(?:topic\s+)?tag(?:\(s\)|s)?\s*:\s*(.+)$',
-    'power_keywords':  r'^power\s+keywords?\s*:\s*(.+)$',
-    'photo_credit':    r'^PC\s*:\s*(.+)$',
-    'age_groups':      r'^age\s+group(?:\(s\)|s)?\s*:\s*(.+)$',
-    'original_url':    r'^original\s*:\s*(.+)$',
+    'title':            r'^title\s*:\s*(.+)$',
+    'subtitle':         r'^subtitle\s*:\s*(.+)$',
+    'author_name':      r'^author(?:\s+name)?\s*:\s*(.+)$',
+    'author_title':     r'^author\s+title\s*:\s*(.+)$',
+    'topic_tags':       r'^(?:topic\s+)?tag(?:\(s\)|s)?\s*:\s*(.+)$',
+    'power_keywords':   r'^power\s+keywords?\s*:\s*(.+)$',
+    'photo_credit':     r'^PC\s*:\s*(.+)$',
+    'age_groups':       r'^age\s+group(?:\(s\)|s)?\s*:\s*(.+)$',
+    'original_url':     r'^original\s*:\s*(.+)$',
+    'meta_title':       r'^meta\s+title\s*:\s*(.+)$',
+    'meta_description': r'^meta\s+description\s*:\s*(.+)$',
 }
 
 # Detects the staging instructions heading
@@ -91,6 +93,7 @@ def parse_docx(file_path: str) -> dict:
         'title': '', 'subtitle': '', 'author_name': '',
         'author_title': '', 'topic_tags': [], 'power_keywords': [],
         'photo_credit': '', 'age_groups': [], 'original_url': '',
+        'meta_title': '', 'meta_description': '',
     }
     for para in article_paras:
         text = para.text.strip()
@@ -126,6 +129,8 @@ def parse_docx(file_path: str) -> dict:
         'detected_photo_credit': detected['photo_credit'],
         'detected_age_groups': detected['age_groups'],
         'detected_original_url': detected['original_url'],
+        'detected_meta_title': detected['meta_title'],
+        'detected_meta_description': detected['meta_description'],
         'staging_instructions': staging_instructions,
     }
 
