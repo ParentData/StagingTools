@@ -521,25 +521,32 @@ def _set_post_subtitle(post_id: int, subtitle: str) -> None:
     if not subtitle:
         return
     # The subtitle is an ACF field (data-name="sub_title", key="field_64ff6de8af157").
-    # Try multiple approaches since the REST API config varies by site.
-    approaches = [
-        ('acf', {'acf': {'sub_title': subtitle}}),
-        ('meta sub_title', {'meta': {'sub_title': subtitle}}),
-        ('meta _sub_title', {'meta': {'_sub_title': subtitle}}),
-        ('fields', {'fields': {'sub_title': subtitle}}),
-    ]
-    for label, payload in approaches:
+    # The REST API silently ignores unregistered meta keys, so we need a custom
+    # endpoint to set ACF fields. We call a lightweight custom REST route that
+    # the staging tool registers via a mu-plugin on the WP side.
+    try:
+        resp = _session.post(
+            f'{WP_SITE_URL}/wp-json/parentdata/v1/set-subtitle',
+            json={'post_id': post_id, 'subtitle': subtitle},
+            auth=_wp_auth(),
+            timeout=10,
+        )
+        resp.raise_for_status()
+        print(f'[wp_client] Subtitle set for post {post_id} via custom endpoint')
+    except Exception as e:
+        print(f'[wp_client] Warning: custom subtitle endpoint failed: {e}')
+        # Fallback: try ACF namespace (works if ACF to REST API plugin is active)
         try:
             resp = _session.post(
                 f'{WP_API}/posts/{post_id}',
-                json=payload,
+                json={'acf': {'sub_title': subtitle}},
                 auth=_wp_auth(),
                 timeout=10,
             )
             resp.raise_for_status()
-            print(f'[wp_client] Subtitle attempt ({label}) for post {post_id}: {resp.status_code}')
-        except Exception as e:
-            print(f'[wp_client] Subtitle attempt ({label}) failed: {e}')
+            print(f'[wp_client] Subtitle fallback (acf) for post {post_id}')
+        except Exception as e2:
+            print(f'[wp_client] Warning: all subtitle approaches failed: {e2}')
 
 
 def resolve_post_id(url: str) -> int | None:
