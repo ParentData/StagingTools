@@ -1053,6 +1053,8 @@ let lastGeneratedHtml = '';
 let lastGeneratePayload = null;
 let uploadedArticleUrl = '';
 let uploadedPhotoCredit = '';
+let uploadedMetaTitle = '';
+let uploadedMetaDescription = '';
 let uploadedAgeGroups = [];
 let uploadedPowerKeywords = [];
 let woMode = 'new';  // 'new', 'total', 'partial'
@@ -1372,6 +1374,8 @@ async function _submitUpload(formData) {
 
     if (data.article_url) uploadedArticleUrl = data.article_url;
     uploadedPhotoCredit = data.photo_credit || '';
+    uploadedMetaTitle = data.meta_title || '';
+    uploadedMetaDescription = data.meta_description || '';
     uploadedAgeGroups = data.age_groups || [];
     uploadedPowerKeywords = data.power_keywords || [];
 
@@ -2432,6 +2436,8 @@ async function generateEmail() {
       featured_image_alt: document.getElementById('f-img-alt').value,
       topic_tags: topicTags,
       photo_credit: uploadedPhotoCredit,
+      meta_title: uploadedMetaTitle,
+      meta_description: uploadedMetaDescription,
       age_groups: uploadedAgeGroups,
       power_keywords: uploadedPowerKeywords,
       related_articles: relatedArticles,

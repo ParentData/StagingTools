@@ -729,6 +729,8 @@ def _process_docx(tmp_path: str, template_type: str = 'standard') -> dict:
         'bottom_line_html':  fields.get('bottom_line_html', ''),
         'graph_count':     parsed.get('graph_count', 0),
         'author_url':      'https://parentdata.org/author/eoster/',
+        'meta_title':      parsed.get('detected_meta_title', ''),
+        'meta_description': parsed.get('detected_meta_description', ''),
     }
 
     staging = parsed.get('staging_instructions', {})
