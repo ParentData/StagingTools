@@ -447,6 +447,7 @@ def find_coauthor(name: str) -> int | None:
 
 def create_draft(
     title, content, excerpt='', slug='', subtitle='',
+    featured_image_alt='', photo_credit='',
     featured_media_id=0,
     category_ids=None, post_topic_ids=None, post_type_ids=None,
     coauthor_ids=None, meta_description='', focus_keyword='',
@@ -485,6 +486,8 @@ def create_draft(
         _set_rank_math_meta(post_id, rank_meta)
     if subtitle:
         _set_post_subtitle(post_id, subtitle)
+    _set_featured_image_info(post_id, featured_image_alt, photo_credit)
+
     return {
         'id': post_id,
         'edit_url': f'{WP_SITE_URL}/wp-admin/post.php?post={post_id}&action=edit',
@@ -544,6 +547,23 @@ def _set_post_subtitle(post_id: int, subtitle: str) -> None:
             print(f'[wp_client] Subtitle fallback (acf) for post {post_id}')
         except Exception as e2:
             print(f'[wp_client] Warning: all subtitle approaches failed: {e2}')
+
+
+def _set_featured_image_info(post_id: int, alt_text: str, credit_line: str) -> None:
+    """Set the ACF 'alt_text' and 'credit_line' fields on a post via custom endpoint."""
+    if not alt_text and not credit_line:
+        return
+    try:
+        resp = _session.post(
+            f'{WP_SITE_URL}/wp-json/parentdata/v1/set-featured-image-info',
+            json={'post_id': post_id, 'alt_text': alt_text, 'credit_line': credit_line},
+            auth=_wp_auth(),
+            timeout=10,
+        )
+        resp.raise_for_status()
+        print(f'[wp_client] Featured image info set for post {post_id}')
+    except Exception as e:
+        print(f'[wp_client] Warning: failed to set featured image info: {e}')
 
 
 def resolve_post_id(url: str) -> int | None:
@@ -613,6 +633,11 @@ def update_post(post_id: int, **fields) -> dict:
     subtitle = wp_meta.pop('subtitle', None) or fields.get('subtitle', '')
     if subtitle:
         _set_post_subtitle(post_id, subtitle)
+
+    # Set featured image ACF fields
+    fi_alt = fields.get('featured_image_alt', '')
+    fi_credit = fields.get('photo_credit', '')
+    _set_featured_image_info(post_id, fi_alt, fi_credit)
 
     return {
         'id': post_id,
@@ -704,6 +729,8 @@ def _prepare_post_fields(fields: dict) -> dict:
     return {
         'title': title,
         'subtitle': subtitle_text,
+        'featured_image_alt': featured_alt,
+        'photo_credit': photo_credit,
         'content': content,
         'wp_meta': wp_meta,
         'featured_media_id': featured_media_id,
@@ -738,6 +765,8 @@ def publish_or_update(fields: dict) -> dict:
             status='draft',
             title=prepared['title'],
             subtitle=prepared.get('subtitle', ''),
+            featured_image_alt=prepared.get('featured_image_alt', ''),
+            photo_credit=prepared.get('photo_credit', ''),
             content=prepared['content'],
             excerpt=wp_meta.get('excerpt', ''),
             featured_media=prepared['featured_media_id'],
@@ -822,6 +851,8 @@ def _create_draft_from_prepared(prepared: dict) -> dict:
         title=prepared['title'], content=prepared['content'],
         excerpt=wp_meta.get('excerpt', ''), slug=wp_meta.get('slug', ''),
         subtitle=prepared.get('subtitle', ''),
+        featured_image_alt=prepared.get('featured_image_alt', ''),
+        photo_credit=prepared.get('photo_credit', ''),
         featured_media_id=prepared['featured_media_id'],
         category_ids=prepared['category_ids'],
         post_topic_ids=prepared['post_topic_ids'],
