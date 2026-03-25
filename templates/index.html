@@ -2531,9 +2531,11 @@ async function stageToWordPress() {
       gi++;
     }
 
+    const subtitle = document.getElementById('wo-subtitle').value.trim();
     payload = {
       wo_mode: woMode,
       title: document.getElementById('wo-title').value,
+      subtitle_lines: subtitle ? [subtitle] : [],
       article_body_html: document.getElementById('wo-body').value,
       featured_image_url: document.getElementById('wo-img-url').value,
       featured_image_alt: document.getElementById('wo-img-alt').value,

@@ -647,6 +647,12 @@ def _prepare_post_fields(fields: dict) -> dict:
     has_anchor = 'id="bottom-line"' in content
     print(f'[wp_client] bottom-line anchor in content: {has_anchor}')
 
+    # Use the subtitle from the DOCX as the WP excerpt (matches how Latest
+    # template works). Fall back to Claude-generated excerpt if no subtitle.
+    subtitle_lines = fields.get('subtitle_lines', [])
+    if subtitle_lines:
+        wp_meta['excerpt'] = ' '.join(subtitle_lines)
+
     return {
         'title': title,
         'content': content,
