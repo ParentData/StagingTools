@@ -458,7 +458,7 @@ def create_draft(
     if excerpt:
         payload['excerpt'] = excerpt
     if subtitle:
-        payload.setdefault('meta', {})['wps_subtitle'] = subtitle
+        payload.setdefault('meta', {})['subtitle'] = subtitle
     if slug:
         payload['slug'] = slug
     if featured_media_id:
@@ -519,31 +519,15 @@ def _set_post_subtitle(post_id: int, subtitle: str) -> None:
     """
     if not subtitle:
         return
-    # Try setting via the WP Subtitle plugin's REST support
-    # (wps_subtitle is exposed if the plugin registers it)
     try:
         resp = _session.post(
             f'{WP_API}/posts/{post_id}',
-            json={'meta': {'wps_subtitle': subtitle}},
+            json={'meta': {'subtitle': subtitle}},
             auth=_wp_auth(),
             timeout=10,
         )
         resp.raise_for_status()
-        print(f'[wp_client] Subtitle set for post {post_id} via meta')
-        return
-    except Exception:
-        pass
-
-    # Fallback: try setting via the excerpt field (some themes use this)
-    try:
-        resp = _session.post(
-            f'{WP_API}/posts/{post_id}',
-            json={'excerpt': subtitle},
-            auth=_wp_auth(),
-            timeout=10,
-        )
-        resp.raise_for_status()
-        print(f'[wp_client] Subtitle set for post {post_id} via excerpt fallback')
+        print(f'[wp_client] Subtitle set for post {post_id}')
     except Exception as e:
         print(f'[wp_client] Warning: failed to set subtitle: {e}')
 
@@ -612,7 +596,7 @@ def update_post(post_id: int, **fields) -> dict:
         _set_rank_math_meta(post_id, rank_meta)
 
     # Set subtitle via dedicated call (REST API may drop unregistered meta)
-    subtitle = wp_meta.pop('wps_subtitle', None) or fields.get('subtitle', '')
+    subtitle = wp_meta.pop('subtitle', None) or fields.get('subtitle', '')
     if subtitle:
         _set_post_subtitle(post_id, subtitle)
 
@@ -729,7 +713,7 @@ def publish_or_update(fields: dict) -> dict:
             raise ValueError(f'Could not find post for URL: {original_url}')
         meta = {}
         if prepared.get('subtitle'):
-            meta['wps_subtitle'] = prepared['subtitle']
+            meta['subtitle'] = prepared['subtitle']
         if wp_meta.get('meta_description'):
             meta['rank_math_description'] = wp_meta['meta_description']
         # Power keywords from the doc override Claude-generated focus keyword
