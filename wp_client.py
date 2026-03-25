@@ -458,7 +458,7 @@ def create_draft(
     if excerpt:
         payload['excerpt'] = excerpt
     if subtitle:
-        payload.setdefault('meta', {})['subtitle'] = subtitle
+        payload['acf'] = {'sub_title': subtitle}
     if slug:
         payload['slug'] = slug
     if featured_media_id:
@@ -519,17 +519,31 @@ def _set_post_subtitle(post_id: int, subtitle: str) -> None:
     """
     if not subtitle:
         return
+    # The subtitle is an ACF field (data-name="sub_title", key="field_64ff6de8af157").
+    # ACF fields can be set via the REST API using the acf namespace.
     try:
         resp = _session.post(
             f'{WP_API}/posts/{post_id}',
-            json={'meta': {'subtitle': subtitle}},
+            json={'acf': {'sub_title': subtitle}},
             auth=_wp_auth(),
             timeout=10,
         )
         resp.raise_for_status()
-        print(f'[wp_client] Subtitle set for post {post_id}')
+        print(f'[wp_client] Subtitle set for post {post_id} via acf.sub_title')
     except Exception as e:
-        print(f'[wp_client] Warning: failed to set subtitle: {e}')
+        print(f'[wp_client] Warning: failed to set subtitle via ACF: {e}')
+        # Fallback: try setting via meta with the ACF field key
+        try:
+            resp = _session.post(
+                f'{WP_API}/posts/{post_id}',
+                json={'meta': {'sub_title': subtitle}},
+                auth=_wp_auth(),
+                timeout=10,
+            )
+            resp.raise_for_status()
+            print(f'[wp_client] Subtitle set for post {post_id} via meta.sub_title')
+        except Exception as e2:
+            print(f'[wp_client] Warning: failed to set subtitle via meta: {e2}')
 
 
 def resolve_post_id(url: str) -> int | None:
@@ -712,8 +726,6 @@ def publish_or_update(fields: dict) -> dict:
         if not post_id:
             raise ValueError(f'Could not find post for URL: {original_url}')
         meta = {}
-        if prepared.get('subtitle'):
-            meta['subtitle'] = prepared['subtitle']
         if wp_meta.get('meta_description'):
             meta['rank_math_description'] = wp_meta['meta_description']
         # Power keywords from the doc override Claude-generated focus keyword
@@ -725,6 +737,7 @@ def publish_or_update(fields: dict) -> dict:
             post_id,
             status='draft',
             title=prepared['title'],
+            subtitle=prepared.get('subtitle', ''),
             content=prepared['content'],
             excerpt=wp_meta.get('excerpt', ''),
             featured_media=prepared['featured_media_id'],
