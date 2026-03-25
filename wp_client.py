@@ -248,22 +248,19 @@ def _insert_bottom_line_anchor_html(html: str) -> str:
 
     if len(para_starts) >= 3:
         p_pos = para_starts[-3]
-        # Back up to the <!-- wp:paragraph --> comment that wraps this <p>
-        wp_comment = text_before.rfind('<!-- wp:paragraph -->', 0, p_pos)
-        insert_pos = wp_comment if wp_comment != -1 else p_pos
     elif para_starts:
         p_pos = para_starts[0]
-        wp_comment = text_before.rfind('<!-- wp:paragraph -->', 0, p_pos)
-        insert_pos = wp_comment if wp_comment != -1 else p_pos
     else:
-        insert_pos = bl_match.start()
+        # No paragraphs before heading — insert empty anchor as fallback
+        anchor = (
+            '\n\n<!-- wp:paragraph -->\n'
+            '<p id="bottom-line"></p>\n'
+            '<!-- /wp:paragraph -->\n\n'
+        )
+        return html[:bl_match.start()] + anchor + html[bl_match.start():]
 
-    anchor = (
-        '\n\n<!-- wp:paragraph -->\n'
-        '<p id="bottom-line"></p>\n'
-        '<!-- /wp:paragraph -->\n\n'
-    )
-    return html[:insert_pos] + anchor + html[insert_pos:]
+    # Add id="bottom-line" to the existing paragraph (WP strips empty <p> tags)
+    return html[:p_pos] + '<p id="bottom-line"' + html[p_pos + 2:]
 
 
 def _inner_html(tag) -> str:
