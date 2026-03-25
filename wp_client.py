@@ -448,13 +448,16 @@ def find_coauthor(name: str) -> int | None:
 # ── Draft creation (for future API integration) ──────────────────────────────
 
 def create_draft(
-    title, content, excerpt='', slug='', featured_media_id=0,
+    title, content, excerpt='', slug='', subtitle='',
+    featured_media_id=0,
     category_ids=None, post_topic_ids=None, post_type_ids=None,
     coauthor_ids=None, meta_description='', focus_keyword='',
 ):
     payload = {'title': title, 'content': content, 'status': 'draft'}
     if excerpt:
         payload['excerpt'] = excerpt
+    if subtitle:
+        payload.setdefault('meta', {})['wps_subtitle'] = subtitle
     if slug:
         payload['slug'] = slug
     if featured_media_id:
@@ -647,14 +650,16 @@ def _prepare_post_fields(fields: dict) -> dict:
     has_anchor = 'id="bottom-line"' in content
     print(f'[wp_client] bottom-line anchor in content: {has_anchor}')
 
-    # Use the subtitle from the DOCX as the WP excerpt (matches how Latest
-    # template works). Fall back to Claude-generated excerpt if no subtitle.
+    # Use the subtitle from the DOCX as the WP excerpt AND the wps_subtitle
+    # meta field (which the theme renders as <p class="sub-title">).
     subtitle_lines = fields.get('subtitle_lines', [])
-    if subtitle_lines:
-        wp_meta['excerpt'] = ' '.join(subtitle_lines)
+    subtitle_text = ' '.join(subtitle_lines) if subtitle_lines else ''
+    if subtitle_text:
+        wp_meta['excerpt'] = subtitle_text
 
     return {
         'title': title,
+        'subtitle': subtitle_text,
         'content': content,
         'wp_meta': wp_meta,
         'featured_media_id': featured_media_id,
@@ -677,6 +682,8 @@ def publish_or_update(fields: dict) -> dict:
         if not post_id:
             raise ValueError(f'Could not find post for URL: {original_url}')
         meta = {}
+        if prepared.get('subtitle'):
+            meta['wps_subtitle'] = prepared['subtitle']
         if wp_meta.get('meta_description'):
             meta['rank_math_description'] = wp_meta['meta_description']
         # Power keywords from the doc override Claude-generated focus keyword
@@ -771,6 +778,7 @@ def _create_draft_from_prepared(prepared: dict) -> dict:
     return create_draft(
         title=prepared['title'], content=prepared['content'],
         excerpt=wp_meta.get('excerpt', ''), slug=wp_meta.get('slug', ''),
+        subtitle=prepared.get('subtitle', ''),
         featured_media_id=prepared['featured_media_id'],
         category_ids=prepared['category_ids'],
         post_topic_ids=prepared['post_topic_ids'],
