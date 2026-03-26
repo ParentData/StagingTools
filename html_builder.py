@@ -3118,6 +3118,15 @@ def _apply_link_fixes(html: str) -> str:
         has_text_dec = bool(re.search(r'\btext-decoration\s*:', cur_style, re.I))
         has_font_sz  = bool(re.search(r'\bfont-size\s*:', cur_style, re.I))
 
+        # Strip font-size:inherit from the <a> tag — natural inheritance is
+        # more reliable on older iOS Mail (see docstring).
+        if has_font_sz and re.search(r'\bfont-size\s*:\s*inherit\b', cur_style, re.I):
+            cur_style = re.sub(r'\s*\bfont-size\s*:\s*inherit\b\s*;?\s*', '', cur_style, flags=re.I).strip()
+            has_font_sz = bool(re.search(r'\bfont-size\s*:', cur_style, re.I))
+            if style_m:
+                attrs = attrs[:style_m.start()] + f'style="{cur_style}"' + attrs[style_m.end():]
+                style_m = re.search(r'\bstyle\s*=\s*"([^"]*)"', attrs, re.I)
+
         # Only skip if the content span already carries the actual link styles
         # with an explicit font-size — not just a formatting span (italic/bold)
         # and not a span that has color+text-dec but is missing font-size.
@@ -3128,24 +3137,43 @@ def _apply_link_fixes(html: str) -> str:
         _has_span_color = bool(_span_style and re.search(r'\bcolor\s*:', _span_style, re.I))
         _has_span_fz    = bool(_span_style and re.search(r'\bfont-size\s*:', _span_style, re.I))
         _has_span_ff    = bool(_span_style and re.search(r'\bfont-family\s*:', _span_style, re.I))
-        already_fixed = _has_span_color and _has_span_fz and _has_span_ff
+        # font-size:inherit is unreliable on iOS — treat it as missing
+        _span_fz_is_inherit = bool(
+            _span_style and re.search(r'\bfont-size\s*:\s*inherit\b', _span_style, re.I)
+        )
+        _has_span_fz_valid = _has_span_fz and not _span_fz_is_inherit
+        already_fixed = _has_span_color and _has_span_fz_valid and _has_span_ff
 
         # Already complete — don't double-process
         if has_color and has_text_dec and already_fixed:
             return m.group(0)
 
-        # Partial fix: span has color+font-size but missing font-family.
-        # Patch font-family into the existing span instead of re-wrapping.
-        if _has_span_color and _has_span_fz and not _has_span_ff:
+        # Partial fix: span has color+font-size but missing font-family,
+        # or span has font-size:inherit that needs replacing with a px value.
+        if _has_span_color and _has_span_fz and not (_has_span_fz_valid and _has_span_ff):
             preceding_ff = re.findall(
                 r'font-family\s*:\s*([^;]+)', html[:m.start()], re.I
             )
             patch_ff = preceding_ff[-1].strip() if preceding_ff else "'DM Sans',Arial,Helvetica,sans-serif"
-            patched_content = re.sub(
-                r'(<span\b[^>]*\bstyle\s*=\s*")',
-                rf'\1font-family:{patch_ff};',
-                content, count=1, flags=re.I
-            )
+            patched_content = content
+            # Patch missing font-family
+            if not _has_span_ff:
+                patched_content = re.sub(
+                    r'(<span\b[^>]*\bstyle\s*=\s*")',
+                    rf'\1font-family:{patch_ff};',
+                    patched_content, count=1, flags=re.I
+                )
+            # Replace font-size:inherit with an explicit px value
+            if _span_fz_is_inherit:
+                parent_fz_matches = re.findall(
+                    r'font-size\s*:\s*(\d+px)', html[:m.start()], re.I
+                )
+                resolved_fz = parent_fz_matches[-1] if parent_fz_matches else '16px'
+                patched_content = re.sub(
+                    r'(<span\b[^>]*\bstyle\s*=\s*"[^"]*)\bfont-size\s*:\s*inherit\b',
+                    rf'\1font-size:{resolved_fz}',
+                    patched_content, count=1, flags=re.I
+                )
             return f'<a{attrs}>{patched_content}</a>'
 
         # Build the styles missing from the <a> tag (no font-size:inherit —
