@@ -1393,6 +1393,14 @@ def _inject_baby_send_b_real_talk(soup, fields):
     prompt = fields.get('real_talk_prompt', '')
     quote = fields.get('real_talk_quote', '')
     if not prompt and not quote:
+        # No Real Talk content — remove the entire section
+        for td in soup.find_all('td', class_='table-box-mobile'):
+            h3 = td.find('h3')
+            if h3 and 'Real Talk' in h3.get_text():
+                tr = td.find_parent('tr')
+                if tr:
+                    tr.decompose()
+                break
         return
     # Find the Real Talk section (blue bg with h3 "Real Talk")
     for td in soup.find_all('td', class_='table-box-mobile'):
