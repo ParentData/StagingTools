@@ -1129,11 +1129,21 @@ def _inject_baby_send_a(soup, fields):
     """Inject all fields into the BabyData Send A template."""
     _update_title(soup, fields)
     _update_baby_banner(soup, fields)
-    # Remove the "Your first week with baby" headline
+    # Remove the "Your first week with baby" headline and insert a spacer
+    # so there's breathing room between the logo and the intro text.
     h1 = soup.find('h1', class_='headline-mobile')
     if h1:
         tr = h1.find_parent('tr')
         if tr:
+            # Insert a 12px spacer row in place of the headline
+            spacer_tr = soup.new_tag('tr')
+            spacer_td = soup.new_tag(
+                'td',
+                style='height:12px;font-size:0;line-height:0;',
+            )
+            spacer_td.append(NavigableString('\u00a0'))
+            spacer_tr.append(spacer_td)
+            tr.insert_before(spacer_tr)
             tr.decompose()
     _inject_baby_send_a_intro(soup, fields)
     _inject_baby_send_a_sections(soup, fields)
@@ -3072,6 +3082,22 @@ def apply_email_fixes(html: str) -> str:
         html,
         flags=re.IGNORECASE,
     )
+
+    # 11. Strip 'tablebox' from <td> class attributes.  The .tablebox a {}
+    #     CSS rule triggers oversized-link rendering on some mobile clients
+    #     (confirmed Samsung Mail).  Inline styles already cover everything
+    #     the class provided.
+    def _strip_tablebox(m):
+        tag = m.group(0)
+        # Remove 'tablebox' from the class list, clean up extra spaces
+        new_tag = re.sub(
+            r'\btablebox\b\s*', '', tag, flags=re.IGNORECASE
+        )
+        # Clean up class="" if now empty
+        new_tag = re.sub(r'\bclass\s*=\s*"\s*"', '', new_tag)
+        return new_tag
+    html = re.sub(r'<td\b[^>]*\bclass\s*=\s*"[^"]*\btablebox\b[^"]*"[^>]*>',
+                  _strip_tablebox, html, flags=re.IGNORECASE)
 
     return html
 
