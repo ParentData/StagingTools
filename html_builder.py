@@ -1245,7 +1245,22 @@ def _inject_baby_send_a_sections(soup, fields):
 
     # Article card (the section with h2 uppercase header)
     card = fields.get('article_card', {})
-    if card:
+    if not card or not card.get('url'):
+        # No article card provided — remove the entire section
+        from bs4 import Comment
+        for td in soup.find_all('td', class_='table-box-mobile'):
+            h2 = td.find('h2')
+            if h2 and h2.get_text().strip().isupper():
+                tr = td.find_parent('tr')
+                if tr:
+                    prev = tr.previous_sibling
+                    while prev and isinstance(prev, NavigableString) and not prev.strip():
+                        prev = prev.previous_sibling
+                    if prev and isinstance(prev, Comment):
+                        prev.extract()
+                    tr.decompose()
+                break
+    else:
         for td in soup.find_all('td', class_='table-box-mobile'):
             h2 = td.find('h2')
             if h2 and h2.get_text().strip().isupper():
