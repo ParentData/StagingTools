@@ -3284,7 +3284,13 @@ def _inject_gmail_ios_css(html: str) -> str:
     h2.section-title headings to lock their font-size/family.
     """
     gmail_css = (
-        "\n/* Gmail iOS: fix font-size/family on body text + article card spans */\n"
+        "\n/* All clients: lock span font-size inside links (Samsung Mail, etc.) */\n"
+        ".tablebox a span,.tablebox li a span,"
+        ".table-box a span,.table-box li a span{"
+        "font-size:16px!important;"
+        "font-family:'DM Sans',Arial,Helvetica,sans-serif!important"
+        "}\n"
+        "/* Gmail iOS: fix font-size/family on body text + article card spans */\n"
         "u + #body .tablebox a,"
         "u + #body .table-box a{font-size:16px!important}\n"
         "u + #body .tablebox li,"
@@ -3357,6 +3363,18 @@ def _inject_gmail_ios_css(html: str) -> str:
     )
     # Append CSS inside the first <style> block (skip if already present)
     if 'u + #body .tablebox a' in html:
+        # Gmail iOS rules already present — but the all-clients span rule
+        # may be missing (added after initial injection).  Patch it in.
+        if '.tablebox a span' not in html:
+            span_css = (
+                "\n/* All clients: lock span font-size inside links (Samsung Mail, etc.) */\n"
+                ".tablebox a span,.tablebox li a span,"
+                ".table-box a span,.table-box li a span{"
+                "font-size:16px!important;"
+                "font-family:'DM Sans',Arial,Helvetica,sans-serif!important"
+                "}\n"
+            )
+            html = html.replace('</style>', span_css + '</style>', 1)
         return html
     html = html.replace('</style>', gmail_css + '</style>', 1)
     return html
