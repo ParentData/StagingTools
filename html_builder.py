@@ -2517,7 +2517,7 @@ def _replace_graph_placeholders(html: str, inline_graphs: list) -> str:
 # ── Simple email injection ─────────────────────────────────────────────────────
 
 _SIMPLE_P_STYLE = (
-    "font-family: 'DM Sans', Arial, Helvetica, sans-serif; font-weight: normal; "
+    "font-family: 'DM Sans', Arial, Helvetica, sans-serif; font-weight: 400; "
     "font-size: 16px; line-height: 22px; color: #000000;"
 )
 
@@ -3063,6 +3063,15 @@ def apply_email_fixes(html: str) -> str:
 
     # 9. Strip letter-spacing: -0.8px from all inline styles
     html = fix_letter_spacing(html)
+
+    # 10. Normalize font-weight:normal → font-weight:400 in inline styles.
+    #     Numeric values are more reliably interpreted across email clients.
+    html = re.sub(
+        r'(style="[^"]*)\bfont-weight\s*:\s*normal\b',
+        r'\1font-weight:400',
+        html,
+        flags=re.IGNORECASE,
+    )
 
     return html
 
