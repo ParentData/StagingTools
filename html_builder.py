@@ -1393,12 +1393,20 @@ def _inject_baby_send_b_real_talk(soup, fields):
     prompt = fields.get('real_talk_prompt', '')
     quote = fields.get('real_talk_quote', '')
     if not prompt and not quote:
-        # No Real Talk content — remove the entire section
+        # No Real Talk content — remove the entire section including
+        # the preceding HTML comment so no whitespace artifacts remain.
+        from bs4 import Comment
         for td in soup.find_all('td', class_='table-box-mobile'):
             h3 = td.find('h3')
             if h3 and 'Real Talk' in h3.get_text():
                 tr = td.find_parent('tr')
                 if tr:
+                    # Remove preceding comment (e.g. <!-- 7. REAL TALK SECTION -->)
+                    prev = tr.previous_sibling
+                    while prev and isinstance(prev, NavigableString) and not prev.strip():
+                        prev = prev.previous_sibling
+                    if prev and isinstance(prev, Comment) and 'REAL TALK' in prev.upper():
+                        prev.extract()
                     tr.decompose()
                 break
         return
