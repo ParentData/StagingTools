@@ -3046,6 +3046,13 @@ def apply_email_fixes(html: str) -> str:
             continue
         p['style'] = style.rstrip('; ') + '; margin-bottom: 16px;'
 
+    # 6b2. Ensure <ul> tags have inline margin/padding for consistent spacing
+    #      across email clients.  Without this, the default <ul> margin/padding
+    #      varies wildly and the first list item can have odd extra spacing.
+    for ul in soup.find_all('ul'):
+        if not ul.get('style'):
+            ul['style'] = 'margin: 0 0 16px 0; padding-left: 24px;'
+
     # 6c. Replace empty <div></div> spacers with a visible spacer
     for div in soup.find_all('div'):
         if not div.get_text(strip=True) and not div.find(True) and not div.get('style'):
