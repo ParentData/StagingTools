@@ -3152,6 +3152,27 @@ def apply_email_fixes(html: str) -> str:
         flags=re.IGNORECASE,
     )
 
+    # 13. Strip inline font-size from <a> and <span> inside .welcome-message
+    #     paragraphs.  The shared mobile CSS uses .welcome-message a { font-size:
+    #     14px !important } but Samsung Mail ignores !important vs inline styles,
+    #     making links render bigger than surrounding text on mobile.  Without
+    #     inline font-size, links inherit from the parent <p> which is correctly
+    #     controlled by CSS on mobile and by its own inline style on desktop.
+    def _strip_welcome_link_fz(m):
+        p_html = m.group(0)
+        # Strip font-size from <a> and <span> inside this paragraph
+        p_html = re.sub(
+            r'(<(?:a|span)\b[^>]*\bstyle="[^"]*?)\bfont-size:\s*\d+px\s*;?\s*',
+            r'\1',
+            p_html,
+            flags=re.IGNORECASE,
+        )
+        return p_html
+    html = re.sub(
+        r'<p\b[^>]*\bclass="[^"]*\bwelcome-message\b[^"]*"[^>]*>.*?</p>',
+        _strip_welcome_link_fz, html, flags=re.IGNORECASE | re.DOTALL,
+    )
+
     return html
 
 
