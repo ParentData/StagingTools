@@ -477,6 +477,18 @@ def _inject_teaser_body(soup, fields):
                 fade_idx = i
                 break
 
+        # Fallback: if the fade text wasn't found (e.g. Claude truncated the
+        # article body), split at the first <h2> after at least 2 blocks so
+        # there is always a faded section when fade_from was requested.
+        if fade_idx == len(blocks) and len(blocks) > 2:
+            for i, el in enumerate(blocks):
+                if i >= 2 and el.name and el.name.lower() == 'h2':
+                    fade_idx = i
+                    break
+            # Still nothing? Use the last block so at least something fades.
+            if fade_idx == len(blocks):
+                fade_idx = max(len(blocks) - 1, 0)
+
     visible_blocks = list(blocks[:fade_idx])
     faded_blocks = blocks[fade_idx:]
 
