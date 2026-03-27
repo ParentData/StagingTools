@@ -2571,7 +2571,7 @@ def _replace_graph_placeholders(html: str, inline_graphs: list) -> str:
 
 _SIMPLE_P_STYLE = (
     "font-family: 'DM Sans', Arial, Helvetica, sans-serif; font-weight: 400; "
-    "font-size: 16px; line-height: 22px; color: #000000;"
+    "font-size: 16px; line-height: 24px; color: #000000;"
 )
 
 _SIMPLE_A_STYLE = (
@@ -3141,6 +3141,16 @@ def apply_email_fixes(html: str) -> str:
         return new_tag
     html = re.sub(r'<td\b[^>]*\bclass\s*=\s*"[^"]*\btablebox\b[^"]*"[^>]*>',
                   _strip_tablebox, html, flags=re.IGNORECASE)
+
+    # 12. Normalize line-height:22px → 24px on 16px body paragraphs.
+    #     22px (1.375 ratio) reads as cramped; 24px (1.5) matches standard
+    #     templates and is more comfortable on mobile.
+    html = re.sub(
+        r'(style="[^"]*\bfont-size:\s*16px[^"]*)\bline-height:\s*22px',
+        r'\1line-height:24px',
+        html,
+        flags=re.IGNORECASE,
+    )
 
     return html
 
