@@ -40,6 +40,7 @@ SHARED_MOBILE_CSS = (
     ".welcome-message{font-size:14px!important;line-height:20px!important;padding:8px 12px!important}\n"
     ".welcome-message a,.welcome-message a span{font-size:14px!important;line-height:20px!important}\n"
     ".sub-text{font-size:16px!important}\n"
+    ".sub-text a,.sub-text a span{font-size:16px!important}\n"
     ".mobile-padding{padding:12px 0px!important}\n"
     ".mobile-hide{display:none!important}\n"
     ".mobile-show{display:block!important;max-height:none!important}\n"
@@ -3373,6 +3374,14 @@ def _inject_shared_mobile_css(html: str) -> str:
     """
     # Detect by a unique rule that only appears in the shared block
     if '.price-image{width:100%' in html:
+        # Shared CSS already present — but patch in .sub-text a rule if missing
+        if '.sub-text a,' not in html:
+            html = html.replace(
+                '.sub-text{font-size:16px!important}',
+                '.sub-text{font-size:16px!important}\n'
+                '.sub-text a,.sub-text a span{font-size:16px!important}',
+                1,
+            )
         return html
     return re.sub(
         r'(<style[^>]*>)',
