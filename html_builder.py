@@ -2625,7 +2625,7 @@ def _inject_simple(soup, fields):
                 li['style'] = _SIMPLE_P_STYLE
         for ul in td.find_all('ul'):
             if not ul.get('style'):
-                ul['style'] = "margin: 0 0 16px 0; padding-left: 0;"
+                ul['style'] = "margin: 0 0 16px 0; padding-left: 0; list-style: none;"
 
     # Button — optional: remove the entire button <tr> if disabled
     show_button = fields.get('show_button', True)
@@ -3052,8 +3052,18 @@ def apply_email_fixes(html: str) -> str:
     #      across email clients.  Without this, the default <ul> margin/padding
     #      varies wildly and the first list item can have odd extra spacing.
     for ul in soup.find_all('ul'):
-        if not ul.get('style'):
-            ul['style'] = 'margin: 0 0 16px 0; padding-left: 0;'
+        ul_style = ul.get('style', '')
+        if not ul_style:
+            ul['style'] = 'margin: 0 0 16px 0; padding-left: 0; list-style: none;'
+        else:
+            # Fix existing ul styles: zero out padding-left and remove bullets
+            if 'padding-left' in ul_style.lower():
+                ul_style = re.sub(r'padding-left:\s*\d+px\s*;?\s*', 'padding-left:0;', ul_style, flags=re.I)
+            else:
+                ul_style = ul_style.rstrip('; ') + '; padding-left: 0;'
+            if 'list-style' not in ul_style.lower():
+                ul_style = ul_style.rstrip('; ') + '; list-style: none;'
+            ul['style'] = ul_style
         # Ensure <li> tags have bottom padding for consistent item spacing
         for li in ul.find_all('li'):
             li_style = li.get('style', '')
