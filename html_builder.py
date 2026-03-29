@@ -2625,7 +2625,7 @@ def _inject_simple(soup, fields):
                 li['style'] = _SIMPLE_P_STYLE
         for ul in td.find_all('ul'):
             if not ul.get('style'):
-                ul['style'] = "margin: 0 0 16px 0; padding-left: 24px;"
+                ul['style'] = "margin: 0 0 16px 0; padding-left: 0;"
 
     # Button — optional: remove the entire button <tr> if disabled
     show_button = fields.get('show_button', True)
@@ -3053,7 +3053,7 @@ def apply_email_fixes(html: str) -> str:
     #      varies wildly and the first list item can have odd extra spacing.
     for ul in soup.find_all('ul'):
         if not ul.get('style'):
-            ul['style'] = 'margin: 0 0 16px 0; padding-left: 24px;'
+            ul['style'] = 'margin: 0 0 16px 0; padding-left: 0;'
         # Ensure <li> tags have bottom padding for consistent item spacing
         for li in ul.find_all('li'):
             li_style = li.get('style', '')
