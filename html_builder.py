@@ -3054,6 +3054,11 @@ def apply_email_fixes(html: str) -> str:
     for ul in soup.find_all('ul'):
         if not ul.get('style'):
             ul['style'] = 'margin: 0 0 16px 0; padding-left: 24px;'
+        # Ensure <li> tags have bottom padding for consistent item spacing
+        for li in ul.find_all('li'):
+            li_style = li.get('style', '')
+            if 'padding-bottom' not in li_style.lower():
+                li['style'] = li_style.rstrip('; ') + '; padding-bottom: 8px;' if li_style else 'padding-bottom: 8px;'
 
     # 6c. Replace empty <div></div> spacers with a visible spacer
     for div in soup.find_all('div'):
