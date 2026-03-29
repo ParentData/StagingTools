@@ -3183,6 +3183,21 @@ def apply_email_fixes(html: str) -> str:
         _strip_responsive_link_fz, html, flags=re.IGNORECASE | re.DOTALL,
     )
 
+    # 13b. Collapse redundant nested spans inside links.  Multiple passes
+    #      through the checker could produce <span><span><span>text</span>
+    #      </span></span>; unwrap inner spans whose styles are a subset of
+    #      the outer span.  Repeat until stable.
+    for _ in range(5):  # max nesting depth
+        prev = html
+        html = re.sub(
+            r'(<span\b[^>]*>)\s*<span\b[^>]*>(.*?)</span>\s*</span>',
+            r'\1\2</span>',
+            html,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        if html == prev:
+            break
+
     return html
 
 
@@ -3261,7 +3276,11 @@ def _apply_link_fixes(html: str) -> str:
             _span_style and re.search(r'\bfont-size\s*:\s*inherit\b', _span_style, re.I)
         )
         _has_span_fz_valid = _has_span_fz and not _span_fz_is_inherit
-        already_fixed = _has_span_color and _has_span_fz_valid and _has_span_ff
+        # A span with color + font-family was created by the link fixer.
+        # Font-size may have been intentionally stripped by step 13 for
+        # responsive classes (.sub-text, .welcome-message), so don't
+        # require it for the "already fixed" check.
+        already_fixed = _has_span_color and _has_span_ff
 
         # Already complete — don't double-process
         if has_color and has_text_dec and already_fixed:
