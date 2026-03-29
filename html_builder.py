@@ -3462,12 +3462,12 @@ def _inject_gmail_ios_css(html: str) -> str:
         "font-size:16px!important;"
         "font-family:'DM Sans',Arial,Helvetica,sans-serif!important"
         "}\n"
-        "/* Gmail iOS: fix link sizes in welcome banner, headings + footer */\n"
-        "u + #body .welcome-message a,"
-        "u + #body .welcome-message a span{"
-        "font-size:18px!important;"
-        "font-family:'DM Sans',Arial,Helvetica,sans-serif!important"
-        "}\n"
+        "/* Gmail iOS: fix link sizes in headings + footer */\n"
+        # NOTE: .welcome-message a rule intentionally removed — step 13 strips
+        # inline font-size so links inherit from the parent, and the mobile CSS
+        # .welcome-message a { font-size:14px } handles mobile.  The u + #body
+        # rule was forcing 18px on Gmail iOS mobile, overriding the 14px mobile
+        # CSS and making links bigger than surrounding text.
         "u + #body .h3-heading a,"
         "u + #body .h3-heading a span{"
         "font-size:18px!important;"
@@ -3502,6 +3502,13 @@ def _inject_gmail_ios_css(html: str) -> str:
                 "}\n"
             )
             html = html.replace('</style>', span_css + '</style>', 1)
+        # Remove the u + #body .welcome-message a rule — it forces 18px on
+        # Gmail iOS mobile, overriding the 14px mobile CSS.
+        html = re.sub(
+            r'u \+ #body \.welcome-message a,'
+            r'u \+ #body \.welcome-message a span\{[^}]+\}\n?',
+            '', html,
+        )
         return html
     html = html.replace('</style>', gmail_css + '</style>', 1)
     return html
