@@ -48,7 +48,8 @@ SHARED_MOBILE_CSS = (
     ".upgrade-headline-mobile{font-size:30px!important;line-height:36px!important;letter-spacing:-1.5px!important}\n"
     ".logo-mobile{width:123px!important;height:36px!important}\n"
     ".button-mobile{width:250px!important;padding:19px 27px!important}\n"
-    ".subscribe-btn-mobile a{padding:20px 24px!important;font-size:20px!important}\n"
+    ".subscribe-btn-mobile a{padding:20px 24px!important;font-size:20px!important;white-space:normal!important}\n"
+    ".subscribe-btn-mobile a span{font-size:20px!important}\n"
     ".continue-reading-btn a{padding:16px!important;font-size:18px!important}\n"
     ".box-pad{padding:0px!important}\n"
     ".table-box-mobile{padding:24px 20px!important}\n"
@@ -3198,6 +3199,16 @@ def apply_email_fixes(html: str) -> str:
         if html == prev:
             break
 
+    # 13c. Strip white-space:nowrap from CTA button links.  On mobile,
+    #      nowrap can force the button wider than the viewport, causing the
+    #      email client to zoom out the entire email (making all text smaller).
+    html = re.sub(
+        r'(<a\b[^>]*\bstyle="[^"]*?)\s*white-space:\s*nowrap\s*;?\s*',
+        r'\1',
+        html,
+        flags=re.IGNORECASE,
+    )
+
     return html
 
 
@@ -3399,6 +3410,14 @@ def _inject_shared_mobile_css(html: str) -> str:
                 '.sub-text{font-size:16px!important}',
                 '.sub-text{font-size:16px!important}\n'
                 '.sub-text a,.sub-text a span{font-size:16px!important}',
+                1,
+            )
+        # Patch: button span font-size + white-space:normal on mobile
+        if '.subscribe-btn-mobile a span' not in html:
+            html = html.replace(
+                '.subscribe-btn-mobile a{padding:20px 24px!important;font-size:20px!important}',
+                '.subscribe-btn-mobile a{padding:20px 24px!important;font-size:20px!important;white-space:normal!important}\n'
+                '.subscribe-btn-mobile a span{font-size:20px!important}',
                 1,
             )
         return html
