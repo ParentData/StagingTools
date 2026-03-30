@@ -146,7 +146,7 @@ Extract all fields and produce properly formatted email HTML. Return a single JS
   Convert special characters to their HTML entities or Unicode equivalents.
   Do NOT include Emily's welcome section here — only the guest author's article content.
   IMPORTANT: If the article has a "The bottom line" section (heading + bullet list), you MUST include it in article_body_html. Do NOT omit or separate it.
-  Remove any "[Take me to the bottom line]" placeholder text — that is a button added separately.
+  Remove any "[Take me to the bottom line]" or "[The bottom line]" placeholder/jump-link text — those are buttons added separately.
 
 GRAPH PLACEHOLDERS:
 If the mammoth HTML contains [[GRAPH_1]], [[GRAPH_2]], etc., these are embedded
@@ -240,6 +240,11 @@ def _strip_wp_bloat(html: str) -> str:
     html = re.sub(
         r'<div[^>]*class="wp-block-buttons[^"]*"[^>]*>.*?</div>\s*</div>',
         '', html, flags=re.S
+    )
+    # Remove "[The bottom line]" jump-link text (plain text or link early in article)
+    html = re.sub(
+        r'<p[^>]*>\s*(?:<a[^>]*>)?\s*\[The bottom line\]\s*(?:</a>)?\s*</p>',
+        '', html, flags=re.I
     )
     # Remove figcaption elements (photo credits like "Getty", "iStock", etc.)
     html = re.sub(r'<figcaption[^>]*>.*?</figcaption>', '', html, flags=re.S)
