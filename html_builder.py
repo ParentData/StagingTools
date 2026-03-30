@@ -1837,10 +1837,19 @@ def _update_paid_digest_cards(soup, fields):
         image_alt = _escape_attr(article.get('image_alt', '') or title)
 
         # Update all img tags in the card (mobile + desktop variants)
+        # and wrap in <a> linking to the article if not already linked.
         for img in card.find_all('img'):
             if image_url:
                 img['src'] = image_url
             img['alt'] = image_alt
+            # Wrap image in a link to the article
+            parent = img.parent
+            if parent and parent.name != 'a':
+                a_tag = soup.new_tag(
+                    'a', href=url, target='_blank', rel='noopener',
+                    style='text-decoration: none;',
+                )
+                img.wrap(a_tag)
 
         # Update h3 title
         h3 = card.find('h3')
