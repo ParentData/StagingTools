@@ -3125,10 +3125,20 @@ def apply_email_fixes(html: str) -> str:
             continue
         p['style'] = style.rstrip('; ') + '; margin-bottom: 16px;'
 
-    # 6b2. Ensure <ul> tags have inline margin/padding for consistent spacing
-    #      across email clients.  Without this, the default <ul> margin/padding
-    #      varies wildly and the first list item can have odd extra spacing.
+    # 6b2. Ensure <ul> tags in body content have inline margin/padding for
+    #      consistent spacing.  Skip bottom-line <ul> lists (inside colored
+    #      boxes) — those need their bullets for the summary format.
+    _bottom_line_bg = re.compile(r'#(?:a9b4ff|a9ddf3|e0a9ca|f5f0ff|a9ddf4)', re.I)
     for ul in soup.find_all('ul'):
+        # Skip <ul> inside a bottom-line colored box
+        in_bottom_line = False
+        for parent in ul.parents:
+            if parent.name == 'td' and _bottom_line_bg.search(parent.get('style', '')):
+                in_bottom_line = True
+                break
+        if in_bottom_line:
+            continue
+
         ul_style = ul.get('style', '')
         if not ul_style:
             ul['style'] = 'margin: 0 0 16px 0; padding-left: 0; list-style: none;'
