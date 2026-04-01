@@ -470,6 +470,57 @@ IMPORTANT: Return ONLY the raw JSON object. No markdown fences, no explanation."
     return _call_claude(prompt, max_tokens=500)
 
 
+def extract_link_keywords(article_body_html: str) -> list:
+    """
+    Identify 2-3 keyword phrases in the article body suitable for internal linking.
+
+    Returns a list of dicts: [{keyword: "sleep training", anchor_text: "research on sleep training"}, ...]
+    The anchor_text is the exact text span from the article that should become the link.
+    """
+    prompt = f"""You are helping add internal links to a ParentData newsletter article.
+
+Below is the article body HTML. Your job: identify 2-3 keyword phrases that would be good
+candidates for linking to other ParentData articles.
+
+## ARTICLE BODY:
+{article_body_html}
+
+## RULES:
+- Pick 2-3 topical keyword phrases (2-4 words each) that represent key concepts in the article
+- For each keyword, find a natural, descriptive anchor text phrase (3-7 words) that appears
+  VERBATIM in the article text — this exact text will become the clickable link
+- Focus on text in the FIRST FEW PARAGRAPHS (before any <h1> or <h2> if possible)
+- SKIP any text that is already inside an <a> tag — do not re-link existing links
+- The keyword should be something another parenting/health article could be about
+  (e.g. "sleep training", "screen time", "prenatal vitamins", not generic words like "research" or "parents")
+
+## RESPONSE FORMAT:
+Return a JSON array of objects. Each object has:
+- "keyword": the search keyword to find a matching article (2-4 words)
+- "anchor_text": the exact verbatim text from the article to wrap in a link (3-7 words)
+
+Example: [{{"keyword": "sleep training", "anchor_text": "research on sleep training"}}]
+
+Return ONLY the JSON array. No markdown fences, no explanation."""
+
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=500,
+        messages=[{'role': 'user', 'content': prompt}],
+    )
+    text = response.content[0].text.strip()
+    # Strip markdown fences if present
+    text = re.sub(r'^```(?:json)?\s*', '', text)
+    text = re.sub(r'\s*```$', '', text)
+    try:
+        result = json.loads(text)
+        if isinstance(result, list):
+            return result
+    except (json.JSONDecodeError, ValueError):
+        pass
+    return []
+
+
 def _call_claude(prompt: str, max_tokens: int = 8000) -> dict:
     """Send a prompt to Claude and parse the JSON response.
 

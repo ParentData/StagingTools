@@ -124,6 +124,70 @@ def cache_info() -> dict:
         return {'cached': False}
 
 
+def search_articles_for_linking(
+    keyword: str,
+    exclude_urls: set = None,
+) -> dict | None:
+    """
+    Find the single best ParentData article matching a keyword phrase.
+
+    Searches the cached article index first (title + description scoring).
+    Falls back to the WP REST API search if no strong local match.
+
+    Args:
+        keyword:      Search keyword phrase (e.g. "sleep training")
+        exclude_urls: Set of URLs to skip (already linked in the article)
+
+    Returns:
+        {title, url} or None if no match found.
+    """
+    exclude_urls = {u.rstrip('/') for u in (exclude_urls or set())}
+    keyword_lower = keyword.lower()
+    keyword_words = [w for w in keyword_lower.split() if w not in STOP_WORDS and len(w) > 2]
+
+    # Score cached articles
+    articles = _load_articles()
+    best, best_score = None, 0
+    for a in articles:
+        if a.get('url', '').rstrip('/') in exclude_urls:
+            continue
+        combined = (a['title'] + ' ' + a['description']).lower()
+        score = 0
+        # Exact phrase match in title is strongest signal
+        if keyword_lower in a['title'].lower():
+            score += 10
+        # Exact phrase in description
+        elif keyword_lower in combined:
+            score += 5
+        # Word overlap
+        score += sum(2 for w in keyword_words if w in combined)
+        if score > best_score:
+            best_score = score
+            best = a
+
+    if best_score >= 5:
+        return {'title': best['title'], 'url': best['url']}
+
+    # Fall back to WP REST API search
+    try:
+        resp = requests.get(
+            API_BASE,
+            params={'search': keyword, 'per_page': 5, '_fields': 'title,link'},
+            headers=HEADERS,
+            timeout=10,
+        )
+        if resp.ok:
+            for post in resp.json():
+                url = post.get('link', '').rstrip('/')
+                if url and url not in exclude_urls:
+                    title = post.get('title', {}).get('rendered', '')
+                    return {'title': title, 'url': post['link']}
+    except Exception:
+        pass
+
+    return None
+
+
 # ── Internal helpers ────────────────────────────────────────────────────────────
 
 def _load_articles() -> list:

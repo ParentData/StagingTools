@@ -163,6 +163,74 @@ def build_email_html(template_path: str, fields: dict, template_type: str = 'sta
     return apply_email_fixes(html)
 
 
+def inject_internal_links(article_body_html: str, link_targets: list) -> str:
+    """
+    Insert internal links into article body HTML.
+
+    For each target, finds the first occurrence of anchor_text in a text node
+    that is NOT inside an <a> tag, and wraps it in a styled link.
+
+    Args:
+        article_body_html: The article body HTML string.
+        link_targets:      List of {anchor_text, url} dicts.
+
+    Returns:
+        Modified HTML string with links inserted.
+    """
+    if not link_targets or not article_body_html:
+        return article_body_html
+
+    soup = BeautifulSoup(article_body_html, 'html.parser')
+    linked_urls = set()
+
+    for target in link_targets:
+        anchor_text = target.get('anchor_text', '').strip()
+        url = target.get('url', '').strip()
+        if not anchor_text or not url or url in linked_urls:
+            continue
+
+        # Walk text nodes, skip those inside <a> tags
+        for text_node in soup.find_all(string=True):
+            # Skip if inside an <a> tag
+            if any(p.name == 'a' for p in text_node.parents):
+                continue
+            # Skip non-body elements (style, script, etc.)
+            if text_node.parent.name in ('style', 'script', 'title', '[document]'):
+                continue
+
+            # Case-insensitive search for the anchor text
+            idx = text_node.lower().find(anchor_text.lower())
+            if idx == -1:
+                continue
+
+            # Preserve the original case from the document
+            original_text = str(text_node)
+            before = original_text[:idx]
+            matched = original_text[idx:idx + len(anchor_text)]
+            after = original_text[idx + len(anchor_text):]
+
+            # Build the link
+            a_tag = soup.new_tag(
+                'a', href=url,
+                style='color: #054f8b; text-decoration: underline;',
+            )
+            a_tag.string = matched
+
+            # Replace the text node with before + link + after
+            parent = text_node.parent
+            text_node.replace_with(NavigableString(before))
+            # Insert the link and remaining text after 'before'
+            before_node = parent.find(string=before)
+            if before_node:
+                before_node.insert_after(NavigableString(after))
+                before_node.insert_after(a_tag)
+
+            linked_urls.add(url)
+            break  # Move to next target
+
+    return str(soup)
+
+
 # ── Private helpers ──────────────────────────────────────────────────────────
 
 def _update_title(soup, fields):

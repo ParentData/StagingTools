@@ -323,6 +323,9 @@ def upload():
             if template_type == 'baby_article':
                 response_data['age_text'] = ''  # User fills in via UI
 
+            if template_type in ('standard', 'latest_teaser'):
+                _add_internal_links(response_data)
+
             return jsonify(response_data)
 
         except Exception as e:
@@ -380,7 +383,7 @@ def _process_docx(tmp_path: str, template_type: str = 'standard') -> dict:
         # Strip metadata header lines AND intro (everything up to first <hr>)
         body_html = _strip_metadata_and_intro(parsed['mammoth_html'])
 
-        return {
+        response_data = {
             'title':              parsed['detected_title'],
             'subtitle':           parsed['detected_subtitle'],
             'author_name':        parsed['detected_author_name'],
@@ -401,6 +404,8 @@ def _process_docx(tmp_path: str, template_type: str = 'standard') -> dict:
             'meta_title':         parsed.get('detected_meta_title', ''),
             'meta_description':   parsed.get('detected_meta_description', ''),
         }
+        _add_internal_links(response_data)
+        return response_data
 
     if template_type == 'latest_teaser':
         from wp_fetcher import fetch_wp_article
@@ -737,6 +742,9 @@ def _process_docx(tmp_path: str, template_type: str = 'standard') -> dict:
     if staging:
         _apply_staging_instructions(response_data, staging)
 
+    if template_type in ('standard', 'latest_teaser', 'website_only'):
+        _add_internal_links(response_data)
+
     return response_data
 
 
@@ -779,6 +787,59 @@ def _apply_staging_instructions(data: dict, staging: dict) -> None:
     ]
     if graphs:
         data['inline_graphs'] = graphs
+
+
+def _add_internal_links(response_data: dict) -> None:
+    """
+    Auto-insert 2-3 internal ParentData links into article_body_html.
+
+    Uses Claude to pick keyword phrases, searches the article index for
+    matching articles, and inserts the links. Modifies response_data in place.
+    Failures are silently logged — never blocks staging.
+    """
+    body = response_data.get('article_body_html', '')
+    if not body:
+        return
+
+    try:
+        from claude_client import extract_link_keywords
+        from article_fetcher import search_articles_for_linking
+        from html_builder import inject_internal_links
+
+        # Collect URLs already in the article body
+        existing_urls = set(re.findall(r'href="([^"]+)"', body, re.I))
+        # Also exclude related article URLs if present
+        for ra in response_data.get('related_articles', []):
+            if ra.get('url'):
+                existing_urls.add(ra['url'])
+
+        # Step 1: ask Claude for keyword phrases
+        keywords = extract_link_keywords(body)
+        if not keywords:
+            return
+
+        # Step 2: find matching articles for each keyword
+        link_targets = []
+        for kw in keywords[:3]:
+            keyword = kw.get('keyword', '')
+            anchor_text = kw.get('anchor_text', '')
+            if not keyword or not anchor_text:
+                continue
+            match = search_articles_for_linking(keyword, exclude_urls=existing_urls)
+            if match:
+                link_targets.append({
+                    'anchor_text': anchor_text,
+                    'url': match['url'],
+                })
+                existing_urls.add(match['url'])
+
+        # Step 3: insert links into the HTML
+        if link_targets:
+            response_data['article_body_html'] = inject_internal_links(body, link_targets)
+            print(f'[staging] Auto-linked {len(link_targets)} internal articles')
+
+    except Exception as e:
+        print(f'[staging] Auto-linking failed (non-blocking): {e}')
 
 
 def _extract_raw_field(raw_text: str, pattern: str) -> str:
