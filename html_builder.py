@@ -3125,39 +3125,14 @@ def apply_email_fixes(html: str) -> str:
             continue
         p['style'] = style.rstrip('; ') + '; margin-bottom: 16px;'
 
-    # 6b2. Ensure <ul> tags in body content have inline margin/padding for
-    #      consistent spacing.  Skip bottom-line <ul> lists (inside colored
-    #      boxes) — those need their bullets for the summary format.
-    _bottom_line_bg = re.compile(r'#(?:a9b4ff|a9ddf3|e0a9ca|f5f0ff|a9ddf4)', re.I)
+    # 6b2. Ensure unstyled <ul> tags have inline margin so the first list
+    #      item doesn't get odd extra spacing from client defaults.
+    #      Do NOT strip bullets — article body lists (e.g. "The bottom line")
+    #      need them.  Bullet removal is only done in _inject_simple() for
+    #      marketing/simple emails where arrows serve as separators.
     for ul in soup.find_all('ul'):
-        # Skip <ul> inside a bottom-line colored box
-        in_bottom_line = False
-        for parent in ul.parents:
-            if parent.name == 'td' and _bottom_line_bg.search(parent.get('style', '')):
-                in_bottom_line = True
-                break
-        if in_bottom_line:
-            continue
-
-        ul_style = ul.get('style', '')
-        if not ul_style:
-            ul['style'] = 'margin: 0 0 16px 0; padding-left: 0; list-style: none;'
-        else:
-            # Fix existing ul styles: zero out padding-left and remove bullets
-            if 'padding-left' in ul_style.lower():
-                ul_style = re.sub(r'padding-left:\s*\d+px\s*;?\s*', 'padding-left:0;', ul_style, flags=re.I)
-            else:
-                ul_style = ul_style.rstrip('; ') + '; padding-left: 0;'
-            if 'list-style' not in ul_style.lower():
-                ul_style = ul_style.rstrip('; ') + '; list-style: none;'
-            else:
-                ul_style = re.sub(r'list-style[^;]*;?\s*', 'list-style:none;', ul_style, flags=re.I)
-            ul['style'] = ul_style
-        # Ensure <li> tags have bottom padding for consistent item spacing
-        for li in ul.find_all('li'):
-            li_style = li.get('style', '')
-            if 'padding-bottom' not in li_style.lower():
-                li['style'] = li_style.rstrip('; ') + '; padding-bottom: 8px;' if li_style else 'padding-bottom: 8px;'
+        if not ul.get('style'):
+            ul['style'] = 'margin: 0 0 16px 0; padding-left: 16px;'
 
     # 6c. Replace empty <div></div> spacers with a visible spacer
     for div in soup.find_all('div'):
