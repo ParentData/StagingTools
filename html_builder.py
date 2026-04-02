@@ -3278,15 +3278,10 @@ def apply_email_fixes(html: str) -> str:
         if html == prev:
             break
 
-    # 13c. Strip white-space:nowrap from CTA button links.  On mobile,
-    #      nowrap can force the button wider than the viewport, causing the
-    #      email client to zoom out the entire email (making all text smaller).
-    html = re.sub(
-        r'(<a\b[^>]*\bstyle="[^"]*?)\s*white-space:\s*nowrap\s*;?\s*',
-        r'\1',
-        html,
-        flags=re.IGNORECASE,
-    )
+    # 13c. (Removed) Previously stripped white-space:nowrap from button links,
+    #      but that made buttons tall/fat.  The mobile CSS now handles this
+    #      with .subscribe-btn-mobile a { white-space:normal!important } so
+    #      buttons stay wide on desktop but wrap gracefully on mobile.
 
     return html
 
