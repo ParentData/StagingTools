@@ -1798,8 +1798,10 @@ function populateWebsiteOnlyFields(data) {
   document.getElementById('wo-body').value = data.article_body_html || '';
   uploadedPowerKeywords = data.power_keywords || [];
 
-  // If doc has an original_url, auto-switch to total restage mode
-  if (data.original_url) {
+  // If doc has an original_url and user is still on "New Article",
+  // auto-switch to total restage.  Don't override if user already
+  // selected partial or total.
+  if (data.original_url && woMode === 'new') {
     document.querySelector('input[name="wo-mode"][value="total"]').checked = true;
     updateWoMode();
   }
