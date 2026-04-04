@@ -54,6 +54,7 @@
         </optgroup>
         <optgroup label="Website">
           <option value="website_only">Website Only</option>
+          <option value="website_qa">Website Q&amp;A</option>
         </optgroup>
       </select>
     </div>
@@ -985,12 +986,12 @@
       </div>
 
       <div class="field-group image-url-field">
-        <label for="wo-img-url">Featured Image URL <span class="required">*</span></label>
+        <label for="wo-img-url" id="wo-img-url-label">Featured Image URL <span class="required">*</span></label>
         <input type="url" id="wo-img-url" placeholder="https://parentdata.org/wp-content/uploads/…">
       </div>
 
       <div class="field-group">
-        <label for="wo-img-alt">Featured Image Alt Text</label>
+        <label for="wo-img-alt" id="wo-img-alt-label">Featured Image Alt Text</label>
         <input type="text" id="wo-img-alt" placeholder="Brief description of the image">
       </div>
     </div>
@@ -1074,7 +1075,7 @@ function selectTemplate(type) {
 
   const isQA = type === 'qa';
   const isPregnantQA = type === 'pregnant_qa';
-  const isWebsiteOnly = type === 'website_only';
+  const isWebsiteOnly = type === 'website_only' || type === 'website_qa';
   const hasOwnUploadArea = isQA || isPregnantQA;
   document.getElementById('standard-upload-area').style.display = hasOwnUploadArea ? 'none' : '';
   document.getElementById('qa-upload-area').style.display = isQA ? '' : 'none';
@@ -1092,7 +1093,7 @@ function selectTemplate(type) {
     //   Latest Teaser          → DOCX + Google Doc
     //   (Q&A types have their own areas)
     const showDocx = type === 'latest_teaser';
-    const showGdoc = type === 'standard' || type === 'fertility_digest' || type === 'latest_teaser' || type === 'paid_digest' || type === 'free_digest' || type === 'toddler_article' || type === 'toddler_qa' || type === 'toddler_digest' || type === 'simple' || type === 'marketing_digest' || type === 'website_only' || type === 'baby_send_a' || type === 'baby_send_b' || type === 'baby_qa';
+    const showGdoc = type === 'standard' || type === 'fertility_digest' || type === 'latest_teaser' || type === 'paid_digest' || type === 'free_digest' || type === 'toddler_article' || type === 'toddler_qa' || type === 'toddler_digest' || type === 'simple' || type === 'marketing_digest' || type === 'website_only' || type === 'website_qa' || type === 'baby_send_a' || type === 'baby_send_b' || type === 'baby_qa';
     const showWp   = type === 'fertility' || type === 'marketing' || type === 'pregnant_article' || type === 'baby_article';
 
     document.getElementById('docx-upload-row').style.display    = showDocx ? '' : 'none';
@@ -1118,7 +1119,7 @@ function _showPostUploadSections(type) {
   const isToddlerDigest = type === 'toddler_digest';
   const isSimple = type === 'simple';
   const isMarketingDigest = type === 'marketing_digest';
-  const isWebsiteOnly = type === 'website_only';
+  const isWebsiteOnly = type === 'website_only' || type === 'website_qa';
   const isBabySendA = type === 'baby_send_a';
   const isBabySendB = type === 'baby_send_b';
   const isBabyArticle = type === 'baby_article';
@@ -1286,7 +1287,7 @@ async function handleGoogleDocUrl() {
     ? 'Downloading Google Doc, extracting article links, and fetching article metadata… this may take 30–60 seconds.'
     : currentTemplate === 'simple'
     ? 'Downloading Google Doc and extracting content…'
-    : currentTemplate === 'website_only'
+    : currentTemplate === 'website_only' || currentTemplate === 'website_qa'
     ? 'Downloading Google Doc and extracting metadata + body…'
     : currentTemplate === 'baby_send_a' || currentTemplate === 'baby_send_b'
     ? 'Downloading Google Doc and extracting fields… this may take 20–40 seconds.'
@@ -1366,7 +1367,7 @@ async function _submitUpload(formData) {
     const isToddlerDigest = currentTemplate === 'toddler_digest';
     const isSimple = currentTemplate === 'simple';
     const isMarketingDigest = currentTemplate === 'marketing_digest';
-    const isWebsiteOnly = currentTemplate === 'website_only';
+    const isWebsiteOnly = currentTemplate === 'website_only' || currentTemplate === 'website_qa';
     const isBabySendA = currentTemplate === 'baby_send_a';
     const isBabySendB = currentTemplate === 'baby_send_b';
     const isBabyArticle = currentTemplate === 'baby_article';
@@ -2026,7 +2027,7 @@ async function generateEmail() {
   const isToddlerQA = currentTemplate === 'toddler_qa';
   const isToddlerDigest = currentTemplate === 'toddler_digest';
   const isSimple = currentTemplate === 'simple';
-  const isWebsiteOnly = currentTemplate === 'website_only';
+  const isWebsiteOnly = currentTemplate === 'website_only' || currentTemplate === 'website_qa';
   const isBabySendA = currentTemplate === 'baby_send_a';
   const isBabySendB = currentTemplate === 'baby_send_b';
   const isBabyArticle = currentTemplate === 'baby_article';
@@ -2513,6 +2514,14 @@ function _applyWoMode() {
   // Only show graphs section if there are graph fields AND not partial mode
   const hasGraphs = document.getElementById('wo-graph-fields').children.length > 0;
   document.getElementById('section-wo-graphs').style.display = (showFull && hasGraphs) ? '' : 'none';
+  // Q&A: image goes in the body, not as featured image
+  const isQA = currentTemplate === 'website_qa';
+  document.getElementById('wo-img-url-label').innerHTML = isQA
+    ? 'Body Image URL'
+    : 'Featured Image URL <span class="required">*</span>';
+  document.getElementById('wo-img-alt-label').textContent = isQA
+    ? 'Body Image Alt Text'
+    : 'Featured Image Alt Text';
 }
 
 // ── Website Only: Stage to WordPress ─────────────────────────────────────────
@@ -2533,6 +2542,7 @@ async function stageToWordPress() {
       wo_mode: 'partial',
       original_url: originalUrl,
       article_body_html: document.getElementById('wo-body').value,
+      is_qa: currentTemplate === 'website_qa',
     };
   } else {
     // New article or total restage: send all fields
@@ -2568,6 +2578,7 @@ async function stageToWordPress() {
       original_url: woMode === 'total' ? document.getElementById('wo-original-url').value : '',
       inline_graphs: inlineGraphs,
       power_keywords: uploadedPowerKeywords,
+      is_qa: currentTemplate === 'website_qa',
     };
 
     if (woMode === 'total') {

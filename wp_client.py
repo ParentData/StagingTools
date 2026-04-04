@@ -44,12 +44,16 @@ def strip_email_styles(
     graphs: list | None = None,
     featured_image_url: str = '',
     photo_credit: str = '',
+    skip_cta: bool = False,
 ) -> str:
     """Convert email-styled HTML to WordPress Gutenberg block HTML.
 
     Produces output with proper <!-- wp:type --> block comments matching
     the format used in parentdata.org posts.  The featured image (with
     photo credit caption) is inserted after the CTA reusable block.
+
+    If skip_cta is True, the CTA reusable block and featured image are
+    not inserted (used for Q&A posts which have no CTA or featured image).
     """
     if not html or not html.strip():
         return ''
@@ -110,7 +114,11 @@ def strip_email_styles(
     # Build block output from top-level elements
     blocks = []
     # Track whether we've inserted the CTA block (after intro, before first heading)
-    cta_inserted = False
+    cta_inserted = skip_cta  # skip_cta=True means we never insert it
+    # For Q&A posts: insert body image after 2 paragraphs following the quote
+    _qa_saw_quote = False
+    _qa_para_after_quote = 0
+    _qa_image_inserted = False
 
     for el in list(soup.children):
         if isinstance(el, NavigableString):
@@ -143,6 +151,13 @@ def strip_email_styles(
                     f'<p>{inner}</p>\n'
                     f'<!-- /wp:paragraph -->'
                 )
+                # Q&A body image: insert after 2nd paragraph following the quote
+                if skip_cta and _qa_saw_quote and not _qa_image_inserted:
+                    _qa_para_after_quote += 1
+                    if _qa_para_after_quote == 2 and featured_image_url:
+                        blocks.append(_make_image_block(
+                            featured_image_url, '', photo_credit))
+                        _qa_image_inserted = True
 
         elif el.name in ('ul', 'ol'):
             tag = el.name
@@ -185,18 +200,30 @@ def strip_email_styles(
                         )
 
         elif el.name == 'blockquote':
-            inner = _inner_html(el)
+            # Wrap inner <p> tags with wp:paragraph comments to match WP format
+            inner_parts = []
+            for child in el.children:
+                if getattr(child, 'name', None) == 'p':
+                    inner_parts.append(
+                        f'<!-- wp:paragraph -->\n<p>{_inner_html(child)}</p>\n<!-- /wp:paragraph -->'
+                    )
+                elif getattr(child, 'name', None) == 'cite':
+                    inner_parts.append(str(child))
+                elif isinstance(child, NavigableString) and child.strip():
+                    inner_parts.append(str(child))
+            inner = ''.join(inner_parts)
             blocks.append(
                 f'<!-- wp:quote -->\n'
                 f'<blockquote class="wp-block-quote">{inner}</blockquote>\n'
                 f'<!-- /wp:quote -->'
             )
+            _qa_saw_quote = True
 
         elif el.name == 'hr':
             blocks.append('<!-- wp:separator -->\n<hr class="wp-block-separator"/>\n<!-- /wp:separator -->')
 
     # If no headings were found, insert CTA + image at the end
-    if not cta_inserted:
+    if not cta_inserted and not skip_cta:
         blocks.append(f'<!-- wp:block {{"ref":{WP_CTA_BLOCK_REF}}} /-->')
         if featured_image_url:
             blocks.append(_make_image_block(
@@ -399,6 +426,13 @@ def find_or_create_post_topic(name: str) -> int:
     )
     resp.raise_for_status()
     return resp.json()['id']
+
+
+WP_POST_TYPE_QA = 187  # "Q&A" term in the 'post-type' taxonomy (slug: q-and-a)
+
+
+def _resolve_post_type_qa() -> int:
+    return WP_POST_TYPE_QA
 
 
 def find_coauthor(name: str) -> int | None:
@@ -666,10 +700,12 @@ def _prepare_post_fields(fields: dict) -> dict:
     photo_credit = fields.get('photo_credit', '')
     author_name = fields.get('author_name', '')
 
+    is_qa = fields.get('is_qa', False)
     content = strip_email_styles(
         body_html, graphs,
         featured_image_url=featured_url,
         photo_credit=photo_credit,
+        skip_cta=is_qa,
     )
     if not content.strip():
         raise ValueError('No article body to publish')
@@ -687,7 +723,8 @@ def _prepare_post_fields(fields: dict) -> dict:
         wp_meta['meta_description'] = doc_meta_desc
 
     featured_media_id = 0
-    if featured_url:
+    if featured_url and not is_qa:
+        # Q&A posts don't have a featured image — image goes in the body
         try:
             featured_media_id = upload_media(featured_url, featured_alt)
         except Exception:
@@ -747,7 +784,7 @@ def _prepare_post_fields(fields: dict) -> dict:
         'featured_media_id': featured_media_id,
         'category_ids': category_ids,
         'post_topic_ids': post_topic_ids,
-        'post_type_ids': [WP_POST_TYPE_ARTICLE],
+        'post_type_ids': [_resolve_post_type_qa()] if is_qa else [WP_POST_TYPE_ARTICLE],
         'coauthor_ids': coauthor_ids,
         'power_keywords': power_keywords,
     }

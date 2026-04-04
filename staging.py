@@ -187,6 +187,14 @@ TEMPLATES = {
         'has_related_reading': False,
         'has_bottom_line': False,
     },
+    'website_qa': {
+        'label': 'Website Q&A',
+        'file': None,
+        'has_welcome': False,
+        'has_author_block': False,
+        'has_related_reading': False,
+        'has_bottom_line': False,
+    },
 }
 
 
@@ -376,12 +384,15 @@ def _process_docx(tmp_path: str, template_type: str = 'standard') -> dict:
 
     parsed = parse_docx(tmp_path)
 
-    if template_type == 'website_only':
-        # Website-only: return metadata + body for WordPress push (no email)
+    if template_type in ('website_only', 'website_qa'):
+        # Website-only / Website Q&A: return metadata + body for WordPress push (no email)
         staging = parsed.get('staging_instructions', {})
 
         # Strip metadata header lines AND intro (everything up to first <hr>)
         body_html = _strip_metadata_and_intro(parsed['mammoth_html'])
+
+        if template_type == 'website_qa':
+            body_html = _wrap_qa_question(body_html)
 
         response_data = {
             'title':              parsed['detected_title'],
@@ -940,6 +951,72 @@ def _strip_metadata_and_intro(html: str) -> str:
                 el.decompose()
             else:
                 break
+
+    return str(soup).strip()
+
+
+def _wrap_qa_question(html: str) -> str:
+    """Wrap the leading bold question + reader sign-off in a <blockquote>.
+
+    Q&A docs have this pattern at the top of the body:
+        <p><strong>question text…</strong></p>
+        <p><strong>—ReaderName</strong></p>
+        <p>answer paragraphs…</p>
+
+    This converts the question + sign-off into:
+        <blockquote>
+          <p>question text…</p>
+          <cite><strong>—ReaderName</strong></cite>
+        </blockquote>
+
+    which strip_email_styles() then converts to a wp:quote Gutenberg block.
+    """
+    from bs4 import BeautifulSoup as _BS, NavigableString
+
+    soup = _BS(html, 'html.parser')
+    top_elements = [el for el in soup.children if getattr(el, 'name', None) == 'p']
+
+    if not top_elements:
+        return html
+
+    # Collect consecutive bold-only paragraphs from the top
+    bold_ps = []
+    for p in top_elements:
+        # A "bold-only" paragraph has a single <strong> child (ignoring whitespace)
+        children = [c for c in p.children if not (isinstance(c, NavigableString) and not c.strip())]
+        if len(children) == 1 and getattr(children[0], 'name', None) == 'strong':
+            bold_ps.append(p)
+        else:
+            break
+
+    if len(bold_ps) < 2:
+        # Need at least a question + sign-off
+        return html
+
+    # Last bold paragraph is the sign-off (e.g. "—Rachel")
+    sign_off_p = bold_ps[-1]
+    question_ps = bold_ps[:-1]
+
+    # Build the blockquote
+    bq = soup.new_tag('blockquote')
+
+    for qp in question_ps:
+        # Unwrap the <strong> — question text becomes a plain <p>
+        new_p = soup.new_tag('p')
+        strong = qp.find('strong')
+        for child in list(strong.children):
+            new_p.append(child.extract())
+        bq.append(new_p)
+
+    # Sign-off becomes <cite><strong>—Name</strong></cite>
+    cite = soup.new_tag('cite')
+    cite.append(sign_off_p.find('strong'))
+    bq.append(cite)
+
+    # Replace the original bold paragraphs with the blockquote
+    question_ps[0].insert_before(bq)
+    for p in bold_ps:
+        p.decompose()
 
     return str(soup).strip()
 
