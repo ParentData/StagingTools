@@ -2520,14 +2520,9 @@ function _applyWoMode() {
   // Only show graphs section if there are graph fields AND not partial mode
   const hasGraphs = document.getElementById('wo-graph-fields').children.length > 0;
   document.getElementById('section-wo-graphs').style.display = (showFull && hasGraphs) ? '' : 'none';
-  // Q&A: image goes in the body, not as featured image
-  const isQA = currentTemplate === 'website_qa';
-  document.getElementById('wo-img-url-label').innerHTML = isQA
-    ? 'Body Image URL'
-    : 'Featured Image URL <span class="required">*</span>';
-  document.getElementById('wo-img-alt-label').textContent = isQA
-    ? 'Body Image Alt Text'
-    : 'Featured Image Alt Text';
+  // Featured image is required for both website_only and website_qa
+  document.getElementById('wo-img-url-label').innerHTML = 'Featured Image URL <span class="required">*</span>';
+  document.getElementById('wo-img-alt-label').textContent = 'Featured Image Alt Text';
 }
 
 // ── Website Only: Stage to WordPress ─────────────────────────────────────────

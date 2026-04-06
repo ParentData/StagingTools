@@ -115,10 +115,6 @@ def strip_email_styles(
     blocks = []
     # Track whether we've inserted the CTA block (after intro, before first heading)
     cta_inserted = skip_cta  # skip_cta=True means we never insert it
-    # For Q&A posts: insert body image after 2 paragraphs following the quote
-    _qa_saw_quote = False
-    _qa_para_after_quote = 0
-    _qa_image_inserted = False
 
     for el in list(soup.children):
         if isinstance(el, NavigableString):
@@ -151,13 +147,6 @@ def strip_email_styles(
                     f'<p>{inner}</p>\n'
                     f'<!-- /wp:paragraph -->'
                 )
-                # Q&A body image: insert after 2nd paragraph following the quote
-                if skip_cta and _qa_saw_quote and not _qa_image_inserted:
-                    _qa_para_after_quote += 1
-                    if _qa_para_after_quote == 2 and featured_image_url:
-                        blocks.append(_make_image_block(
-                            featured_image_url, '', photo_credit))
-                        _qa_image_inserted = True
 
         elif el.name in ('ul', 'ol'):
             tag = el.name
@@ -217,7 +206,6 @@ def strip_email_styles(
                 f'<blockquote class="wp-block-quote">{inner}</blockquote>\n'
                 f'<!-- /wp:quote -->'
             )
-            _qa_saw_quote = True
 
         elif el.name == 'hr':
             blocks.append('<!-- wp:separator -->\n<hr class="wp-block-separator"/>\n<!-- /wp:separator -->')
@@ -723,8 +711,7 @@ def _prepare_post_fields(fields: dict) -> dict:
         wp_meta['meta_description'] = doc_meta_desc
 
     featured_media_id = 0
-    if featured_url and not is_qa:
-        # Q&A posts don't have a featured image — image goes in the body
+    if featured_url:
         try:
             featured_media_id = upload_media(featured_url, featured_alt)
         except Exception:
