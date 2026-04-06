@@ -188,6 +188,10 @@
       <label for="f-welcome">Welcome Text (Emily's intro HTML)</label>
       <p class="hint">Full HTML including the &lt;hr&gt; at the end. Leave blank if Emily wrote the full article.</p>
       <textarea id="f-welcome" rows="8" class="code-area" placeholder="&lt;p style=&quot;...&quot;&gt;&lt;em&gt;Welcome to The Latest...&lt;/em&gt;&lt;/p&gt;&#10;&lt;hr&gt;"></textarea>
+      <label style="display:flex; align-items:center; gap:8px; margin-top:8px; cursor:pointer; font-weight:normal;">
+        <input type="checkbox" id="f-welcome-bubble">
+        Show as &ldquo;What&rsquo;s new on ParentData?&rdquo; blue bubble
+      </label>
     </div>
 
     <div class="field-group">
@@ -1437,6 +1441,7 @@ function populateFields(data) {
   document.getElementById('f-title').value = data.title || '';
   document.getElementById('f-subtitle').value = (data.subtitle_lines || []).join('\n');
   document.getElementById('f-welcome').value = data.welcome_html || '';
+  document.getElementById('f-welcome-bubble').checked = false;
   document.getElementById('f-author-name').value = data.author_name || '';
   document.getElementById('f-author-title').value = data.author_title || '';
   document.getElementById('f-author-url').value = data.author_url || 'https://parentdata.org/author/eoster/';
@@ -2430,6 +2435,7 @@ async function generateEmail() {
       title: document.getElementById('f-title').value,
       subtitle_lines: subtitleLines,
       welcome_html: (isFertility || isPregnant || isToddlerArticle) ? '' : document.getElementById('f-welcome').value,
+      welcome_bubble: currentTemplate === 'standard' && document.getElementById('f-welcome-bubble').checked,
       article_body_html: document.getElementById('f-body').value,
       bottom_line_html: (isFertility || isPregnant || isToddlerArticle) ? document.getElementById('f-bottomline').value : '',
       author_name: document.getElementById('f-author-name').value,

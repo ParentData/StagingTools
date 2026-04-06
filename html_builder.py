@@ -287,6 +287,35 @@ def _remove_welcome_banner(soup):
         outer_tr.decompose()
 
 
+def _wrap_welcome_bubble(welcome_html: str) -> str:
+    """Wrap Emily's intro in a blue 'What's new on ParentData?' bubble.
+
+    Strips any trailing <hr> from the welcome HTML (the bubble provides its
+    own visual separation) and wraps the remaining content in a styled
+    blue card with a bold heading.
+    """
+    soup = BeautifulSoup(welcome_html, 'html.parser')
+    for hr in soup.find_all('hr'):
+        hr.decompose()
+    inner = str(soup).strip()
+
+    return (
+        '<table align="center" border="0" cellpadding="0" cellspacing="0" '
+        'role="presentation" width="100%" style="margin: 16px 0 24px 0;"><tbody><tr>'
+        '<td style="background-color: #d0d6fc; border-radius: 16px; '
+        'padding: 24px 28px;">'
+        '<h3 style="margin: 0 0 12px 0; font-family: \'Lora\', Georgia, serif; '
+        'font-weight: bold; font-size: 22px; line-height: 28px; '
+        'letter-spacing: -0.8px; color: #000000;">'
+        'What\u2019s new on ParentData?</h3>'
+        f'<div class="welcome-bubble-body" style="font-family: \'DM Sans\', Arial, '
+        'Helvetica, sans-serif; font-size: 16px; line-height: 24px; color: #000000;">'
+        f'{inner}'
+        '</div>'
+        '</td></tr></tbody></table>'
+    )
+
+
 def _replace_article_sections(soup, fields):
     """
     Replace the two article body content sections.
@@ -304,6 +333,8 @@ def _replace_article_sections(soup, fields):
     intro_html, main_html = _split_at_first_heading(body_html)
 
     welcome_html = fields.get('welcome_html', '')
+    if fields.get('welcome_bubble') and welcome_html.strip():
+        welcome_html = _wrap_welcome_bubble(welcome_html)
     img_url = fields.get('featured_image_url', '')
     img_alt = _escape_attr(fields.get('featured_image_alt', ''))
 
