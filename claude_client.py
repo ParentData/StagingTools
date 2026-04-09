@@ -126,15 +126,17 @@ Extract all fields and produce properly formatted email HTML. Return a single JS
 
 - "topic_tags": Array of topic tag strings (e.g. ["Hormones", "Health and Wellness"]).
 
-- "welcome_html": Emily's complete introductory section as HTML. This includes:
+- "welcome_html": Emily's introductory section (the part BEFORE the [LINE] separator) as HTML. This includes:
   1. Any italic newsletter intro paragraphs ("Welcome to The Latest..." etc.) — use <em> for italic text, and <a href="URL"><em>link text</em></a> for italic links.
   2. Any plain-text author bio paragraph Emily wrote introducing the guest author.
-  3. Emily's "—Emily" sign-off paragraph.
+  3. Emily's "—Emily" sign-off paragraph (if present).
   4. A <hr> tag at the very end (after the sign-off).
   Apply the welcome paragraph inline styles from the Style Guide to every <p> in this section.
-  If there is no intro section (Emily wrote the whole article herself), return an empty string "".
+  ONLY content that appears BEFORE the [LINE] separator belongs here.
+  If there is no intro section before [LINE] (or no [LINE] at all), return an empty string "".
 
-- "article_body_html": The complete article body as HTML with inline styles from the Style Guide. Include:
+- "article_body_html": The complete article body — everything AFTER the [LINE] separator — as HTML with inline styles from the Style Guide. Include:
+  - ALL paragraphs that appear after [LINE], including introductory paragraphs before the first heading
   - H1 headings (use <h1> with the H1 style)
   - H2 headings (use <h2> with the H2 style)
   - Regular paragraphs (use <p> with the regular paragraph style)
@@ -144,7 +146,7 @@ Extract all fields and produce properly formatted email HTML. Return a single JS
   Do NOT bold the first paragraph unless it was explicitly bold in the source document.
   Preserve ALL hyperlinks from the source document with their original href values.
   Convert special characters to their HTML entities or Unicode equivalents.
-  Do NOT include Emily's welcome section here — only the guest author's article content.
+  Do NOT include content from before the [LINE] separator — that belongs in welcome_html.
   IMPORTANT: If the article has a "The bottom line" section (heading + bullet list), you MUST include it in article_body_html. Do NOT omit or separate it.
   Remove any "[Take me to the bottom line]" or "[The bottom line]" placeholder/jump-link text — those are buttons added separately.
 

@@ -291,17 +291,31 @@ def _wrap_welcome_bubble(welcome_html: str) -> str:
     """Wrap Emily's intro in a blue 'What's new on ParentData?' bubble.
 
     Strips any trailing <hr> from the welcome HTML (the bubble provides its
-    own visual separation) and wraps the remaining content in a styled
-    blue card with a bold heading.
+    own visual separation), removes italic formatting (bubble text is roman),
+    and wraps the remaining content in a styled blue card with a bold heading.
+    A standard italic "Welcome to The Latest" line is prepended above the bubble.
     """
     soup = BeautifulSoup(welcome_html, 'html.parser')
     for hr in soup.find_all('hr'):
         hr.decompose()
+    # Strip italic tags — bubble body text should not be italic
+    for em in soup.find_all(['em', 'i']):
+        em.unwrap()
     inner = str(soup).strip()
 
-    return (
+    welcome_line = (
+        '<p style="padding-bottom: 16px; margin: 0; '
+        "font-family: 'DM Sans', Arial, Helvetica, sans-serif; "
+        'font-weight: 400; font-style: italic; font-size: 16px; '
+        'line-height: 24px; color: #000000;">'
+        'Welcome to <strong>The Latest</strong>, where I break down current '
+        'research and headlines in pregnancy, parenting, and personal health.'
+        '</p>'
+    )
+
+    bubble = (
         '<table align="center" border="0" cellpadding="0" cellspacing="0" '
-        'role="presentation" width="100%" style="margin: 16px 0 24px 0;"><tbody><tr>'
+        'role="presentation" width="100%" style="margin: 0 0 24px 0;"><tbody><tr>'
         '<td style="background-color: #d0d6fc; border-radius: 16px; '
         'padding: 24px 28px;">'
         '<h3 style="margin: 0 0 12px 0; font-family: \'Lora\', Georgia, serif; '
@@ -314,6 +328,8 @@ def _wrap_welcome_bubble(welcome_html: str) -> str:
         '</div>'
         '</td></tr></tbody></table>'
     )
+
+    return welcome_line + bubble
 
 
 def _replace_article_sections(soup, fields):
