@@ -58,7 +58,9 @@ SHARED_MOBILE_CSS = (
     "body{width:100%!important;min-width:100%!important}\n"
     "table[class=email-container]{width:100%!important}\n"
     "img{max-width:100%!important;height:auto!important}\n"
-    ".news-top-link,.news-top-link a,.news-top-link span,.news-top-link span a{font-size:14px!important;padding:0 4px!important;letter-spacing:0!important}\n"
+    ".news-top-link,.news-top-link a,.news-top-link span,.news-top-link span a{font-size:14px!important;letter-spacing:0!important}\n"
+    ".news-top-link{padding:10px 4px!important}\n"
+    ".news-top-link a,.news-top-link span,.news-top-link span a{padding:0 4px!important}\n"
     ".price-image{width:100%!important;max-width:300px!important;height:auto!important}\n"
     ".pricing-container{width:100%!important;max-width:100%!important}\n"
     ".pricing-row{display:block!important;width:100%!important}\n"
@@ -107,8 +109,10 @@ def build_email_html(template_path: str, fields: dict, template_type: str = 'sta
         _inject_marketing_digest(soup, fields)
     elif template_type == 'fertility_digest':
         _inject_fertility_digest(soup, fields)
-    elif template_type in ('paid_digest', 'free_digest'):
+    elif template_type == 'paid_digest':
         _inject_paid_digest(soup, fields)
+    elif template_type == 'free_digest':
+        _inject_free_digest(soup, fields)
     elif template_type == 'pregnant_article':
         _inject_pregnant_article(soup, fields)
     elif template_type == 'pregnant_qa':
@@ -519,24 +523,64 @@ def _update_copyright(soup):
             break
 
 
-# ── Latest Teaser default intro ──────────────────────────────────────────────
+# ── Latest Teaser welcome box ────────────────────────────────────────────────
+# Styled to match the "What's new on ParentData?" bubble in the standard
+# Latest send: purple (#d0d6fc) bubble with a Lora serif h3 heading and a
+# DM Sans body (no italics).
 
-_LATEST_TEASER_DEFAULT_INTRO = (
-    '<p style="padding-bottom: 24px; margin: 0; '
-    "font-family: 'DM Sans', Arial, Helvetica, sans-serif; "
-    'font-weight: 400; font-style: italic; font-size: 16px; line-height: 24px; color: #000000;">'
-    'Welcome to <strong>The Latest</strong>, where I break down current research and headlines '
-    'in pregnancy, parenting, and personal health. If you\u2019ve seen a recent headline '
-    '(parenting or otherwise) that you\u2019d like me to cover here, let me know by '
-    '<a href="https://parentdata.typeform.com/to/NHBsKJHv" style="color: #000000; text-decoration: underline;">'
-    'sharing your questions</a>.</p>\n'
-    '<p style="padding-bottom: 24px; margin: 0; '
-    "font-family: 'DM Sans', Arial, Helvetica, sans-serif; "
-    'font-weight: 400; font-style: italic; font-size: 16px; line-height: 24px; color: #000000;">'
-    'Did you know that ParentData offers customized weekly newsletters tailored to your exact '
-    'life stage \u2014 from trying to conceive through toddlerhood? That means the data and '
-    'guidance you\u2019re getting is always relevant to where you are right now.</p>'
+_LATEST_TEASER_WELCOME_BUBBLE_HTML = (
+    '<table align="center" border="0" cellpadding="0" cellspacing="0" '
+    'role="presentation" width="100%" style="margin: 0;">'
+    '<tbody><tr>'
+    '<td style="background-color: #d0d6fc; border-radius: 16px; '
+    'padding: 24px 28px;">'
+    '<div class="welcome-bubble-body" style="font-family: \'DM Sans\', Arial, '
+    'Helvetica, sans-serif; font-size: 16px; line-height: 24px; color: #000000;">'
+    '<p style="margin: 0 0 12px 0;">Welcome to The Latest, your Monday '
+    'morning ParentData guide to the panic headlines in pregnancy, '
+    'parenting, and health. And while this newsletter takes on the '
+    'headlines, I know that parenting panic doesn\u2019t need a headline '
+    'to be triggered. That\u2019s why we built a set of customized '
+    'newsletters tailored to you \u2013 time-based email sends from trying '
+    'to conceive through toddlerhood. The idea is simple: get you the data '
+    'you need for where you are right now. So you can know more, and panic '
+    'less.</p>'
+    '<p style="margin: 0;">Curious? '
+    '<a href="https://parentdata.org/register/plus/?coupon=monthly3" '
+    'style="color: #000000; text-decoration: underline;">Try it for a month '
+    'for just $9</a>.</p>'
+    '</div>'
+    '</td>'
+    '</tr></tbody>'
+    '</table>'
 )
+
+
+def _set_latest_teaser_welcome_box(soup):
+    """Replace the welcome-banner row with the Latest Teaser bubble.
+
+    Keeps the welcome-banner <tr> (does not decompose it) and rebuilds its
+    outer <td> so the bubble spans the full content area with consistent
+    40px side padding (matching the section 1 gutter in the standard Latest).
+    """
+    welcome_p = soup.find('p', class_='welcome-message')
+    if not welcome_p:
+        return
+    outer_tr = _outer_email_tr(welcome_p, soup)
+    if outer_tr is None:
+        return
+    outer_td = outer_tr.find('td')
+    if outer_td is None:
+        return
+    outer_td.clear()
+    outer_td['style'] = (
+        'background-color: rgb(255, 255, 255); padding: 24px 40px 24px;'
+    )
+    bubble = BeautifulSoup(
+        _LATEST_TEASER_WELCOME_BUBBLE_HTML, 'html.parser'
+    ).find('table')
+    if bubble is not None:
+        outer_td.append(bubble)
 
 # ── Latest Teaser template injection ─────────────────────────────────────────
 
@@ -545,7 +589,7 @@ def _inject_latest_teaser(soup, fields):
     _update_title(soup, fields)
     _update_headline(soup, fields)
     _update_subtitle(soup, fields)
-    _remove_welcome_banner(soup)
+    _set_latest_teaser_welcome_box(soup)
     _inject_teaser_body(soup, fields)
     _update_teaser_continue_link(soup, fields)
     _update_related_articles(soup, fields.get('related_articles', []))
@@ -698,50 +742,13 @@ def _inject_teaser_body(soup, fields):
                                 if inner_tr:
                                     section6_content_td = inner_tr.find('td')
 
-    # ── Section 4: italic intro + hr + all visible blocks ────────────────────
+    # ── Section 4: all visible blocks ────────────────────────────────────────
+    # The intro/welcome copy now lives entirely in the welcome bubble at the
+    # top of the email (see _set_latest_teaser_welcome_box). Section 4 starts
+    # straight with the article body — no intro paragraph, no <hr>. Any
+    # intro_text passed in is intentionally ignored for the latest teaser.
     if section4_td:
         section4_td.clear()
-
-        # If no intro_text provided, use the hardcoded default (raw HTML with link)
-        if not intro_text.strip():
-            for el in BeautifulSoup(_LATEST_TEASER_DEFAULT_INTRO, 'html.parser').find_all('p'):
-                section4_td.append(el)
-        else:
-            # Italic intro — split on blank lines to support multiple paragraphs
-            intro_style = (
-                "padding-bottom: 24px; margin: 0; "
-                "font-family: 'DM Sans', Arial, Helvetica, sans-serif; "
-                "font-weight: 400; font-style: italic; font-size: 16px; line-height: 24px; color: #000000;"
-            )
-            intro_paras = [p.strip() for p in intro_text.split('\n\n') if p.strip()]
-            if not intro_paras and intro_text.strip():
-                intro_paras = [intro_text.strip()]
-            for para in intro_paras:
-                # Boldface "The Latest" wherever it appears in the intro
-                para = re.sub(
-                    r'\bThe Latest\b',
-                    r'<strong>The Latest</strong>',
-                    para,
-                )
-                # Link "sharing your questions" to the Typeform
-                para = para.replace(
-                    'sharing your questions',
-                    '<a href="https://parentdata.typeform.com/to/NHBsKJHv"'
-                    ' style="color: #000000; text-decoration: underline;">'
-                    'sharing your questions</a>',
-                )
-                new_p = BeautifulSoup(
-                    f'<p style="{intro_style}">{para}</p>', 'html.parser'
-                ).p
-                section4_td.append(new_p)
-
-        # Horizontal rule separating intro from article body
-        section4_td.append(BeautifulSoup(
-            '<hr style="border: none; border-top: 1px solid #e0e0e0; margin: 8px 0 24px 0;">',
-            'html.parser',
-        ).hr)
-
-        # All visible blocks (image already spliced in before first h2)
         for el in visible_blocks:
             section4_td.append(el)
 
@@ -826,7 +833,7 @@ def _handle_fertility_banner(soup, include_banner: bool):
     # Update with new text, preserving the same <p> element and its styling
     base = ("font-family: 'DM Sans', Arial, Helvetica, sans-serif; "
             "font-size: 18px; letter-spacing: 0; -webkit-text-size-adjust: 100%;")
-    banner_p['style'] = f"margin: 0; color: #000000; {base} padding: 0 15px;"
+    banner_p['style'] = f"margin: 0; color: #000000; {base} padding: 10px 15px;"
     banner_p.clear()
     new_html = (
         f'<span style="color: #000000; {base}">Are you starting fertility treatment or no longer TTC? </span>'
@@ -1904,6 +1911,46 @@ def _inject_paid_digest(soup, fields):
             else:
                 intro_td.append(intro_soup)
 
+    _update_paid_digest_cards(soup, fields)
+    _update_copyright(soup)
+
+
+# ── Free Digest template injection ────────────────────────────────────────────
+
+_FREE_DIGEST_INTRO_STYLE = (
+    "font-family: 'DM Sans', Arial, Helvetica, sans-serif; "
+    "font-size: 16px; line-height: 160%; color: rgb(40, 40, 40);"
+)
+
+_FREE_DIGEST_INTRO_HTML = (
+    f'<p style="{_FREE_DIGEST_INTRO_STYLE} margin: 0 0 16px;">'
+    'Welcome to the Digest! Here\u2019s what people are reading on '
+    'ParentData this week.</p>'
+    f'<p style="{_FREE_DIGEST_INTRO_STYLE} margin: 0 0 16px;">'
+    'As a free user, you get limited ParentData reads each month\u2014for '
+    'unlimited access, '
+    '<a href="https://parentdata.org/register/plus/?coupon=monthly3" '
+    'style="color: #054F8B; text-decoration: underline;">'
+    'subscribe for less than $3 a week</a>.</p>'
+)
+
+
+def _set_free_digest_intro(soup):
+    """Replace the free digest intro <td class="table-box"> with two italic
+    paragraphs (no bubble)."""
+    intro_td = soup.find('td', class_='table-box')
+    if intro_td is None:
+        return
+    intro_td.clear()
+    intro_td['style'] = 'padding: 12px 40px;'
+    intro_soup = BeautifulSoup(_FREE_DIGEST_INTRO_HTML, 'html.parser')
+    for node in list(intro_soup.contents):
+        intro_td.append(node)
+
+
+def _inject_free_digest(soup, fields):
+    """Inject the fixed italic intro and article cards into the free digest."""
+    _set_free_digest_intro(soup)
     _update_paid_digest_cards(soup, fields)
     _update_copyright(soup)
 
