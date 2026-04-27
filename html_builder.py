@@ -1221,6 +1221,7 @@ def _update_discussion_questions(soup, fields):
         return
 
     question_td = None
+    use_bullets = False
 
     # New layout: locate the questions <td> as the second child <td> inside
     # td.discussion-questions (first td holds the h3 heading).
@@ -1231,6 +1232,7 @@ def _update_discussion_questions(soup, fields):
         for td in inner_tds:
             if not td.find('h3'):
                 question_td = td
+                use_bullets = True
                 break
 
     # Legacy layout fallback
@@ -1256,15 +1258,15 @@ def _update_discussion_questions(soup, fields):
     # Clear existing questions
     question_td.clear()
 
-    # Insert numbered questions
     for i, q in enumerate(questions):
         is_last = i == len(questions) - 1
         margin = '0' if is_last else '0 0 4px 0'
         q_text = _smart_quotes(_escape_attr(q))
+        marker = '• ' if use_bullets else f'{i + 1}. '
         new_p = BeautifulSoup(
             f'<p style="margin: {margin}; font-family: \'DM Sans\', Arial, Helvetica, sans-serif; '
             f'font-weight: normal; font-size: 16px; line-height: 24px; text-align: left; color: #000000;">'
-            f'{i + 1}. {q_text}</p>',
+            f'{marker}{q_text}</p>',
             'html.parser',
         )
         question_td.append(new_p)
