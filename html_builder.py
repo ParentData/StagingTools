@@ -125,6 +125,8 @@ def build_email_html(template_path: str, fields: dict, template_type: str = 'sta
         _inject_toddler_qa(soup, fields)
     elif template_type == 'toddler_digest':
         _inject_toddler_digest(soup, fields)
+    elif template_type == 'toddler_extended':
+        _inject_toddler_extended(soup, fields)
     elif template_type == 'simple':
         _inject_simple(soup, fields)
     elif template_type == 'baby_send_a':
@@ -435,21 +437,20 @@ def _update_author_block(soup, fields):
             link.append(NavigableString(f'About {first_name}'))
 
 
-def _update_related_articles(soup, articles: list):
-    """Update the two related article card slots."""
+def _update_related_articles(soup, articles: list, heading_text: str = 'More from ParentData'):
+    """Update the related article card slots under an h2 heading."""
     if not articles:
         return
 
-    # Find "More from ParentData" heading
-    more_h2 = None
+    heading_h2 = None
     for h2 in soup.find_all('h2'):
-        if 'More from ParentData' in h2.get_text():
-            more_h2 = h2
+        if heading_text in h2.get_text():
+            heading_h2 = h2
             break
-    if not more_h2:
+    if not heading_h2:
         return
 
-    section_tbody = more_h2.find_parent('tbody')
+    section_tbody = heading_h2.find_parent('tbody')
     if not section_tbody:
         return
 
@@ -458,7 +459,7 @@ def _update_related_articles(soup, articles: list):
     found_heading_row = False
     for tr in section_tbody.find_all('tr', recursive=False):
         if not found_heading_row:
-            if tr.find('h2') and 'More from ParentData' in tr.get_text():
+            if tr.find('h2') and heading_text in tr.get_text():
                 found_heading_row = True
         else:
             card_rows.append(tr)
@@ -896,6 +897,26 @@ def _replace_fertility_body(soup, fields):
     the end of all the content.
     """
     body_html = fields.get('article_body_html', '')
+
+    # Strip any image whose src matches the featured image stem from the body
+    # before splitting, so it doesn't render alongside the explicit featured
+    # image td below. WP variants (e.g. -800x600, -copy) all share the stem.
+    raw_url = fields.get('featured_image_url', '')
+    if raw_url and body_html:
+        _fname = raw_url.rstrip('/').rsplit('/', 1)[-1]
+        _stem = re.sub(r'\.[a-z0-9]+$', '', _fname, flags=re.I)
+        _stem = re.sub(r'-\d+x\d+$', '', _stem)
+        _stem = re.sub(r'-copy(?:-\d+)?$', '', _stem)
+        if _stem and len(_stem) > 5:
+            body_soup = BeautifulSoup(body_html, 'html.parser')
+            for img in body_soup.find_all('img'):
+                if _stem in img.get('src', ''):
+                    parent = img.parent
+                    img.decompose()
+                    if parent and parent.name in ('p', 'div', 'figure') and not parent.get_text(strip=True):
+                        parent.decompose()
+            body_html = str(body_soup)
+
     intro_html, main_html = _split_at_first_heading(body_html)
     if not main_html:
         # No headings — split after 2nd paragraph so image has a natural position
@@ -1088,6 +1109,59 @@ def _inject_toddler_digest(soup, fields):
     _update_copyright(soup)
 
 
+# ── Toddler Extended template injection ─────────────────────────────────────
+
+def _inject_toddler_extended(soup, fields):
+    """Inject all fields into the ToddlerData Extended template."""
+    _update_title(soup, fields)
+    _update_headline(soup, fields)
+    _update_fertility_subtitle_author(soup, fields)
+    _replace_fertility_body(soup, fields)
+    _update_toddler_extended_intro(soup, fields)
+    _update_discussion_questions(soup, fields)
+    _update_win_of_week(soup, fields)
+    _update_related_articles(
+        soup,
+        fields.get('library_corner_articles', []),
+        heading_text='Read More',
+    )
+    _update_copyright(soup)
+
+
+def _update_toddler_extended_intro(soup, fields):
+    """Replace the yellow (#fceea9) intro block's text with intro_text.
+
+    Splits intro_text on blank lines into separate <p> tags. If intro_text
+    is empty, removes the yellow row entirely.
+    """
+    intro_td = soup.find('td', class_='toddler-ext-intro')
+    if not intro_td:
+        return
+    intro_text = (fields.get('intro_text') or '').strip()
+    if not intro_text:
+        outer_tr = _outer_email_tr(intro_td, soup)
+        if outer_tr:
+            outer_tr.decompose()
+        return
+    intro_td.clear()
+    paras = [p.strip() for p in intro_text.split('\n\n') if p.strip()]
+    if not paras:
+        paras = [intro_text]
+    style = (
+        "margin: 0; font-family: 'DM Sans', Arial, Helvetica, sans-serif; "
+        "font-weight: 400; font-size: 16px; line-height: 24px; "
+        "letter-spacing: -0.4px; color: #000000;"
+    )
+    for i, para in enumerate(paras):
+        # Add spacing between paragraphs
+        p_style = style if i == 0 else style.replace('margin: 0;', 'margin: 12px 0 0 0;')
+        p = soup.new_tag('p', style=p_style)
+        # Parse as HTML so inline <strong>/<em> from the DOCX pass through.
+        # Plain prose is also valid HTML, so this is a no-op when no tags exist.
+        p.append(BeautifulSoup(para, 'html.parser'))
+        intro_td.append(p)
+
+
 def _update_toddler_banner(soup, fields):
     """Set the months old in the 'Your child is X months old!' banner."""
     banner_p = soup.find('p', class_='news-top-link')
@@ -1134,39 +1208,50 @@ def _update_toddler_bottom_line(soup, fields):
 
 def _update_discussion_questions(soup, fields):
     """
-    Replace the discussion questions in the pink card.
+    Replace the discussion questions inside the pink block.
 
-    Finds the section by img[alt="Discussion Questions"], then locates the
-    pink card table (background-color: #edc0db; border-radius: 20px) and
-    replaces its <p> tags with the actual questions.
+    Two layouts are supported:
+      - Bottom-line style (toddler_extended): full-width td.discussion-questions
+        with a Lora h3 heading, questions inside a sibling <td> as <p> tags.
+      - Legacy brush-header style (toddler_article): img[alt="Discussion
+        Questions"] above a #edc0db rounded card.
     """
     questions = fields.get('discussion_questions', [])
     if not questions:
         return
 
-    dq_img = soup.find('img', attrs={'alt': 'Discussion Questions'})
-    if not dq_img:
-        return
+    question_td = None
 
-    # The pink card is a sibling or nearby table with #edc0db background
-    dq_section = dq_img.find_parent('table', role='presentation')
-    if not dq_section:
-        return
+    # New layout: locate the questions <td> as the second child <td> inside
+    # td.discussion-questions (first td holds the h3 heading).
+    dq_outer = soup.find('td', class_='discussion-questions')
+    if dq_outer:
+        inner_tds = dq_outer.find_all('td')
+        # Skip the heading td (contains the h3); take the next one.
+        for td in inner_tds:
+            if not td.find('h3'):
+                question_td = td
+                break
 
-    # Find the pink card table within the section
-    pink_card = None
-    for table in dq_section.find_all('table'):
-        style = table.get('style', '')
-        if '#edc0db' in style and 'border-radius' in style:
-            pink_card = table
-            break
-    if not pink_card:
-        return
-
-    # Find the td containing the question <p> tags
-    question_td = pink_card.find('td')
+    # Legacy layout fallback
     if not question_td:
-        return
+        dq_img = soup.find('img', attrs={'alt': 'Discussion Questions'})
+        if not dq_img:
+            return
+        dq_section = dq_img.find_parent('table', role='presentation')
+        if not dq_section:
+            return
+        pink_card = None
+        for table in dq_section.find_all('table'):
+            style = table.get('style', '')
+            if '#edc0db' in style and 'border-radius' in style:
+                pink_card = table
+                break
+        if not pink_card:
+            return
+        question_td = pink_card.find('td')
+        if not question_td:
+            return
 
     # Clear existing questions
     question_td.clear()
@@ -3359,13 +3444,38 @@ def apply_email_fixes(html: str) -> str:
 
     # 13b. Collapse redundant nested spans inside links.  Multiple passes
     #      through the checker could produce <span><span><span>text</span>
-    #      </span></span>; unwrap inner spans whose styles are a subset of
-    #      the outer span.  Repeat until stable.
+    #      </span></span>; unwrap inner spans whose styles are a SUBSET of
+    #      the outer span (i.e. add no new declarations).  Spans that add
+    #      formatting — e.g. <span italic><span bold>text</span></span>
+    #      from em-wrapping-strong — must be preserved or the bold is lost.
+    def _parse_style(s: str) -> dict:
+        out = {}
+        for decl in (s or '').split(';'):
+            decl = decl.strip()
+            if not decl or ':' not in decl:
+                continue
+            k, v = decl.split(':', 1)
+            out[k.strip().lower()] = v.strip().lower().rstrip(';')
+        return out
+
+    def _collapse_nested_spans(m):
+        outer_attrs, inner_attrs, inner_content = m.group(1), m.group(2), m.group(3)
+        outer_style_m = re.search(r'\bstyle\s*=\s*"([^"]*)"', outer_attrs, re.I)
+        inner_style_m = re.search(r'\bstyle\s*=\s*"([^"]*)"', inner_attrs, re.I)
+        outer_style = _parse_style(outer_style_m.group(1) if outer_style_m else '')
+        inner_style = _parse_style(inner_style_m.group(1) if inner_style_m else '')
+        # Only collapse when the inner span adds no new property values
+        # (every key/value in inner exists with the same value in outer).
+        for k, v in inner_style.items():
+            if outer_style.get(k) != v:
+                return m.group(0)
+        return f'<span{outer_attrs}>{inner_content}</span>'
+
     for _ in range(5):  # max nesting depth
         prev = html
         html = re.sub(
-            r'(<span\b[^>]*>)\s*<span\b[^>]*>(.*?)</span>\s*</span>',
-            r'\1\2</span>',
+            r'<span(\b[^>]*)>\s*<span(\b[^>]*)>(.*?)</span>\s*</span>',
+            _collapse_nested_spans,
             html,
             flags=re.IGNORECASE | re.DOTALL,
         )

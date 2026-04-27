@@ -139,6 +139,14 @@ TEMPLATES = {
         'has_related_reading': False,
         'has_bottom_line': False,
     },
+    'toddler_extended': {
+        'label': 'ToddlerData Extended',
+        'file': BASE_DIR / 'email_templates' / 'template_toddlerextended.html',
+        'has_welcome': False,
+        'has_author_block': False,
+        'has_related_reading': True,
+        'has_bottom_line': False,
+    },
     'baby_send_a': {
         'label': 'Newborn Send A',
         'file': BASE_DIR / 'email_templates' / 'template_baby_send_a.html',
@@ -552,6 +560,68 @@ def _process_docx(tmp_path: str, template_type: str = 'standard') -> dict:
         result['qa_authors'] = list(dict.fromkeys(a for a in all_authors if a))
         return result
 
+    if template_type == 'toddler_extended':
+        from docx_parser import parse_toddler_extended_docx
+        from wp_fetcher import fetch_wp_article, fetch_article_metadata
+        from claude_client import reformat_wp_content
+
+        parsed = parse_toddler_extended_docx(tmp_path)
+        article_url = parsed.get('article_url', '')
+        if not article_url:
+            raise ValueError(
+                'No article URL found. Add "Original: https://…" to the doc.'
+            )
+
+        article = fetch_wp_article(article_url)
+        content_html = _strip_featured_image(
+            article['content_html'],
+            article.get('featured_image_url', ''),
+        )
+        reformatted = reformat_wp_content(content_html, 'fertility')
+
+        excerpt_text = article.get('excerpt_text', '')
+        subtitle_lines = (
+            [excerpt_text] if excerpt_text
+            else reformatted.get('subtitle_lines', [])
+        )
+
+        # Fetch metadata for Library Corner URLs (title, image, subtitle)
+        library_corner_articles = []
+        for url in parsed.get('library_corner_urls', []):
+            lc_article = {
+                'title': '',
+                'url': url,
+                'image_url': '',
+                'image_alt': '',
+                'description': '',
+            }
+            try:
+                meta = fetch_article_metadata(url)
+                import html as _html
+                lc_article['title'] = _html.unescape(meta.get('title', ''))
+                lc_article['image_url'] = meta.get('image_url', '')
+                lc_article['image_alt'] = meta.get('image_alt', '') or lc_article['title']
+                lc_article['description'] = meta.get('subtitle', '')
+            except Exception:
+                pass
+            library_corner_articles.append(lc_article)
+
+        return {
+            'title': article.get('title', ''),
+            'subtitle_lines': subtitle_lines,
+            'author_name': article.get('author_name', ''),
+            'featured_image_url': article.get('featured_image_url', ''),
+            'featured_image_alt': article.get('featured_image_alt', ''),
+            'article_body_html': reformatted.get('article_body_html', ''),
+            'bottom_line_html': reformatted.get('bottom_line_html', ''),
+            'article_url': article_url,
+            'intro_text': parsed.get('intro_text', ''),
+            'discussion_questions': parsed.get('discussion_questions', []),
+            'library_corner_articles': library_corner_articles,
+            'win_text': parsed.get('win_text', ''),
+            'win_attribution': parsed.get('win_attribution', ''),
+        }
+
     if template_type == 'toddler_digest':
         from docx_parser import parse_toddler_digest_docx
         from wp_fetcher import fetch_article_image
@@ -783,9 +853,9 @@ def _apply_staging_instructions(data: dict, staging: dict) -> None:
         related.append({
             'title':       title,
             'url':         article_url,
-            'image_url':   ra.get('image_url', ''),
+            'image_url':   ra.get('image_url', '') or (found.get('image_url', '') if found else ''),
             'image_alt':   title,
-            'description': ra.get('tagline', ''),
+            'description': ra.get('tagline', '') or (found.get('description', '') if found else ''),
         })
     if related:
         data['related_articles'] = related
@@ -1080,6 +1150,19 @@ def articles():
     suggestions = fetch_related_articles(topic_tags=tags, keywords=keywords)
     info = cache_info()
     return jsonify({'suggestions': suggestions, 'cache': info})
+
+
+@app.route('/article-by-url')
+def article_by_url():
+    """Look up a single article in the cached index by URL."""
+    from article_fetcher import find_article_by_url
+    url = request.args.get('url', '').strip()
+    if not url:
+        return jsonify({'found': False})
+    article = find_article_by_url(url)
+    if not article:
+        return jsonify({'found': False})
+    return jsonify({'found': True, 'article': article})
 
 
 @app.route('/refresh-articles', methods=['POST'])

@@ -45,6 +45,7 @@
           <option value="toddler_article">Article</option>
           <option value="toddler_digest">Digest</option>
           <option value="toddler_qa">Q&amp;A</option>
+          <option value="toddler_extended">Extended</option>
         </optgroup>
         <optgroup label="Baby">
           <option value="baby_send_a">Newborn Send A</option>
@@ -581,6 +582,55 @@
     </div>
   </section>
 
+  <!-- ── Step 2 (Toddler Extended): Review fields ─────────────────── -->
+  <section id="section-toddler-extended" class="card" hidden>
+    <h2>2. Review ToddlerData Extended Fields</h2>
+
+    <div class="field-group">
+      <label for="tx-intro">Intro Text (yellow block)</label>
+      <p class="hint">Blank lines separate paragraphs.</p>
+      <textarea id="tx-intro" rows="4" style="width:100%;" placeholder="Welcome to this week of ToddlerData…"></textarea>
+    </div>
+
+    <div class="field-group">
+      <label for="tx-discussion">Discussion Questions</label>
+      <p class="hint">One question per line (numbered automatically).</p>
+      <textarea id="tx-discussion" rows="5" style="width:100%;"></textarea>
+    </div>
+
+    <div style="border-top:1px solid #e0e0e0;margin-top:20px;padding-top:16px;">
+      <h3>Library Corner</h3>
+      <div id="toddler-ext-lc-cards">
+        <div style="border-top:1px dashed #ccc;margin-top:12px;padding-top:12px;">
+          <h4>Article 1</h4>
+          <div class="field-group"><label for="tx-lc-title-0">Title</label><input type="text" id="tx-lc-title-0" style="width:100%;"></div>
+          <div class="field-group"><label for="tx-lc-url-0">URL</label><input type="text" id="tx-lc-url-0" style="width:100%;"></div>
+          <div class="field-group"><label for="tx-lc-img-0">Image URL</label><input type="text" id="tx-lc-img-0" style="width:100%;"></div>
+          <div class="field-group"><label for="tx-lc-desc-0">Description</label><input type="text" id="tx-lc-desc-0" style="width:100%;"></div>
+        </div>
+        <div style="border-top:1px dashed #ccc;margin-top:12px;padding-top:12px;">
+          <h4>Article 2</h4>
+          <div class="field-group"><label for="tx-lc-title-1">Title</label><input type="text" id="tx-lc-title-1" style="width:100%;"></div>
+          <div class="field-group"><label for="tx-lc-url-1">URL</label><input type="text" id="tx-lc-url-1" style="width:100%;"></div>
+          <div class="field-group"><label for="tx-lc-img-1">Image URL</label><input type="text" id="tx-lc-img-1" style="width:100%;"></div>
+          <div class="field-group"><label for="tx-lc-desc-1">Description</label><input type="text" id="tx-lc-desc-1" style="width:100%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid #e0e0e0;margin-top:20px;padding-top:16px;">
+      <h3>Win of the Week</h3>
+      <div class="field-group">
+        <label for="tx-win-text">Quote</label>
+        <textarea id="tx-win-text" rows="3" style="width:100%;"></textarea>
+      </div>
+      <div class="field-group">
+        <label for="tx-win-attribution">Attribution</label>
+        <input type="text" id="tx-win-attribution" placeholder="e.g. M &amp; B's Mamá">
+      </div>
+    </div>
+  </section>
+
   <!-- ── Step 2 (Toddler Digest): Review fields ───────────────────── -->
   <section id="section-toddler-digest" class="card" hidden>
     <h2>2. Review Toddler Digest Fields</h2>
@@ -1097,7 +1147,7 @@ function selectTemplate(type) {
     //   Latest Teaser          → DOCX + Google Doc
     //   (Q&A types have their own areas)
     const showDocx = type === 'latest_teaser';
-    const showGdoc = type === 'standard' || type === 'fertility_digest' || type === 'latest_teaser' || type === 'paid_digest' || type === 'free_digest' || type === 'toddler_article' || type === 'toddler_qa' || type === 'toddler_digest' || type === 'simple' || type === 'marketing_digest' || type === 'website_only' || type === 'website_qa' || type === 'baby_send_a' || type === 'baby_send_b' || type === 'baby_qa';
+    const showGdoc = type === 'standard' || type === 'fertility_digest' || type === 'latest_teaser' || type === 'paid_digest' || type === 'free_digest' || type === 'toddler_article' || type === 'toddler_qa' || type === 'toddler_digest' || type === 'toddler_extended' || type === 'simple' || type === 'marketing_digest' || type === 'website_only' || type === 'website_qa' || type === 'baby_send_a' || type === 'baby_send_b' || type === 'baby_qa';
     const showWp   = type === 'fertility' || type === 'marketing' || type === 'pregnant_article' || type === 'baby_article';
 
     document.getElementById('docx-upload-row').style.display    = showDocx ? '' : 'none';
@@ -1121,6 +1171,7 @@ function _showPostUploadSections(type) {
   const isToddlerArticle = type === 'toddler_article';
   const isToddlerQA = type === 'toddler_qa';
   const isToddlerDigest = type === 'toddler_digest';
+  const isToddlerExtended = type === 'toddler_extended';
   const isSimple = type === 'simple';
   const isMarketingDigest = type === 'marketing_digest';
   const isWebsiteOnly = type === 'website_only' || type === 'website_qa';
@@ -1139,7 +1190,7 @@ function _showPostUploadSections(type) {
   });
 
   // Standard-only related reading (also shown for latest_teaser)
-  const showRelated = !isQA && !isPregnantQA && !isFertility && !isMarketing && !isDigest && !isPaidDigest && !isPregnant && !isToddlerArticle && !isToddlerQA && !isToddlerDigest && !isSimple && !isMarketingDigest && !isWebsiteOnly && !isBabySendA && !isBabySendB && !isBabyArticle && !isBabyQA;
+  const showRelated = !isQA && !isPregnantQA && !isFertility && !isMarketing && !isDigest && !isPaidDigest && !isPregnant && !isToddlerArticle && !isToddlerQA && !isToddlerDigest && !isToddlerExtended && !isSimple && !isMarketingDigest && !isWebsiteOnly && !isBabySendA && !isBabySendB && !isBabyArticle && !isBabyQA;
   document.getElementById('section-related').style.display = showRelated ? '' : 'none';
   if (showRelated) document.getElementById('section-related').removeAttribute('hidden');
 
@@ -1190,6 +1241,10 @@ function _showPostUploadSections(type) {
   document.getElementById('section-toddler-digest').style.display = isToddlerDigest ? '' : 'none';
   if (isToddlerDigest) document.getElementById('section-toddler-digest').removeAttribute('hidden');
 
+  // Toddler Extended-only
+  document.getElementById('section-toddler-extended').style.display = isToddlerExtended ? '' : 'none';
+  if (isToddlerExtended) document.getElementById('section-toddler-extended').removeAttribute('hidden');
+
   // Baby Send A-only
   document.getElementById('section-baby-send-a').style.display = isBabySendA ? '' : 'none';
   if (isBabySendA) document.getElementById('section-baby-send-a').removeAttribute('hidden');
@@ -1231,8 +1286,8 @@ function _showPostUploadSections(type) {
   genSection.removeAttribute('hidden');
 
   // Field-level visibility within section-fields
-  setHide('group-welcome', isFertility || isMarketing || isPregnant || isToddlerArticle || isBabyArticle);
-  setHide('group-author-url', isFertility || isMarketing || isPregnant || isToddlerArticle || isBabyArticle);
+  setHide('group-welcome', isFertility || isMarketing || isPregnant || isToddlerArticle || isToddlerExtended || isBabyArticle);
+  setHide('group-author-url', isFertility || isMarketing || isPregnant || isToddlerArticle || isToddlerExtended || isBabyArticle);
   setHide('group-marketing', !isMarketing);
 
   // Fertility/QA-only option in generate section
@@ -1369,6 +1424,7 @@ async function _submitUpload(formData) {
     const isToddlerArticle = currentTemplate === 'toddler_article';
     const isToddlerQA = currentTemplate === 'toddler_qa';
     const isToddlerDigest = currentTemplate === 'toddler_digest';
+    const isToddlerExtended = currentTemplate === 'toddler_extended';
     const isSimple = currentTemplate === 'simple';
     const isMarketingDigest = currentTemplate === 'marketing_digest';
     const isWebsiteOnly = currentTemplate === 'website_only' || currentTemplate === 'website_qa';
@@ -1404,6 +1460,8 @@ async function _submitUpload(formData) {
       populateToddlerQAFields(data);
     } else if (isToddlerDigest) {
       populateToddlerDigestFields(data);
+    } else if (isToddlerExtended) {
+      populateToddlerExtendedFields(data);
     } else if (isPregnantQA) {
       populatePregnantQAFields(data);
     } else if (isQA) {
@@ -1626,6 +1684,23 @@ function populateToddlerQAFields(data) {
     authorLine = `Today\u2019s answers come from ${authors.slice(0, -1).join(', ')} and ${authors[authors.length - 1]}.`;
   }
   document.getElementById('pqa-author-line').value = authorLine;
+}
+
+function populateToddlerExtendedFields(data) {
+  // Reuse standard populateFields for title/subtitle/body/image
+  populateFields(data);
+  document.getElementById('tx-intro').value = data.intro_text || '';
+  document.getElementById('tx-discussion').value = (data.discussion_questions || []).join('\n');
+  const lc = data.library_corner_articles || [];
+  for (let i = 0; i < 2; i++) {
+    const art = lc[i] || {};
+    document.getElementById(`tx-lc-title-${i}`).value = art.title || '';
+    document.getElementById(`tx-lc-url-${i}`).value = art.url || '';
+    document.getElementById(`tx-lc-img-${i}`).value = art.image_url || '';
+    document.getElementById(`tx-lc-desc-${i}`).value = art.description || '';
+  }
+  document.getElementById('tx-win-text').value = data.win_text || '';
+  document.getElementById('tx-win-attribution').value = data.win_attribution || '';
 }
 
 function populateToddlerDigestFields(data) {
@@ -2015,6 +2090,33 @@ function applySwap(slotIndex) {
   select.value = '';
 }
 
+// Auto-fill the title / image / tagline when the user pastes a ParentData URL
+// into a related-reading slot's URL field. Only fills fields that are empty —
+// anything the user has already typed is left alone.
+async function lookupRelatedByUrl(slotIndex) {
+  const url = document.getElementById(`rel-${slotIndex}-url`).value.trim();
+  if (!url || !/^https?:\/\//i.test(url)) return;
+  try {
+    const resp = await fetch(`/article-by-url?url=${encodeURIComponent(url)}`);
+    const data = await resp.json();
+    if (!data.found) return;
+    const a = data.article;
+    const setIfEmpty = (id, val) => {
+      const el = document.getElementById(id);
+      if (el && !el.value && val) el.value = val;
+    };
+    setIfEmpty(`rel-${slotIndex}-image-url`, a.image_url);
+    setIfEmpty(`rel-${slotIndex}-image-alt`, a.image_alt || a.title);
+    setIfEmpty(`rel-${slotIndex}-title`, a.title);
+    setIfEmpty(`rel-${slotIndex}-description`, a.description);
+  } catch (e) { /* non-blocking */ }
+}
+
+[0, 1].forEach(i => {
+  const el = document.getElementById(`rel-${i}-url`);
+  if (el) el.addEventListener('change', () => lookupRelatedByUrl(i));
+});
+
 // ── Generate ────────────────────────────────────────────────────────────────
 async function generateEmail() {
   showStatus('generate-status', 'Building email HTML…', 'info');
@@ -2031,6 +2133,7 @@ async function generateEmail() {
   const isToddlerArticle = currentTemplate === 'toddler_article';
   const isToddlerQA = currentTemplate === 'toddler_qa';
   const isToddlerDigest = currentTemplate === 'toddler_digest';
+  const isToddlerExtended = currentTemplate === 'toddler_extended';
   const isSimple = currentTemplate === 'simple';
   const isWebsiteOnly = currentTemplate === 'website_only' || currentTemplate === 'website_qa';
   const isBabySendA = currentTemplate === 'baby_send_a';
@@ -2286,6 +2389,33 @@ async function generateEmail() {
       })),
       win_text: document.getElementById('td-win-text').value,
       win_attribution: document.getElementById('td-win-attribution').value,
+    };
+  } else if (isToddlerExtended) {
+    const subtitleLines = document.getElementById('f-subtitle').value
+      .split('\n').map(s => s.trim()).filter(Boolean);
+    const questions = document.getElementById('tx-discussion').value
+      .split('\n').map(s => s.trim()).filter(Boolean);
+    const libraryCorner = [0, 1].map(i => ({
+      title:       document.getElementById(`tx-lc-title-${i}`).value,
+      url:         document.getElementById(`tx-lc-url-${i}`).value,
+      image_url:   document.getElementById(`tx-lc-img-${i}`).value,
+      image_alt:   document.getElementById(`tx-lc-title-${i}`).value,
+      description: document.getElementById(`tx-lc-desc-${i}`).value,
+    })).filter(a => a.url || a.title);
+    payload = {
+      template_type: 'toddler_extended',
+      title: document.getElementById('f-title').value,
+      subtitle_lines: subtitleLines,
+      author_name: document.getElementById('f-author-name').value,
+      featured_image_url: document.getElementById('f-img-url').value,
+      featured_image_alt: document.getElementById('f-img-alt').value,
+      article_body_html: document.getElementById('f-body').value,
+      article_url: uploadedArticleUrl,
+      intro_text: document.getElementById('tx-intro').value,
+      discussion_questions: questions,
+      library_corner_articles: libraryCorner,
+      win_text: document.getElementById('tx-win-text').value,
+      win_attribution: document.getElementById('tx-win-attribution').value,
     };
   } else if (isPregnantQA) {
     payload = {

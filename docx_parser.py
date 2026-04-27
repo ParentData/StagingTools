@@ -712,6 +712,125 @@ def parse_toddler_digest_docx(file_path: str) -> dict:
     }
 
 
+def parse_toddler_extended_docx(file_path: str) -> dict:
+    """
+    Parse a ToddlerData Extended DOCX (exported from Google Doc).
+
+    Expected document structure:
+      Subject Line: …                             (ignored)
+      <intro paragraph(s)>
+      Original: https://parentdata.org/…          (article URL)
+      DISCUSSION QUESTIONS                        (heading)
+      <question 1>
+      <question 2>
+      …
+      LIBRARY CORNER                              (heading)
+      <url 1>
+      <url 2>
+      WIN OF THE WEEK                             (heading)
+      "<quote>"
+      —<attribution>
+
+    Returns:
+        {
+            intro_text:           str,
+            article_url:          str,
+            discussion_questions: [str],
+            library_corner_urls:  [str],
+            win_text:             str,
+            win_attribution:      str,
+        }
+    """
+    from docx.oxml.ns import qn as _qn
+
+    doc = Document(file_path)
+    _bold_ids, _italic_ids = _bold_italic_style_ids(doc)
+
+    _pd_url_re = re.compile(r'https?://\S+', re.I)
+
+    intro_lines = []
+    article_url = ''
+    discussion_questions = []
+    library_corner_urls = []
+    win_text = ''
+    win_attribution = ''
+
+    state = 'intro'  # 'intro' | 'discussion' | 'library' | 'win'
+
+    for para in doc.paragraphs:
+        text = para.text.strip()
+        if not text:
+            continue
+
+        # Skip "Subject Line:" / "Preheader:" / "From Name:" metadata
+        if re.match(r'^(Subject\s+Line|Preheader|From\s+Name)\s*:', text, re.I):
+            continue
+
+        # "Original: <url>" → article URL (intro ends here)
+        m = re.match(r'^Original\s*:\s*(.+)$', text, re.I)
+        if m:
+            url_match = _pd_url_re.search(m.group(1))
+            if url_match:
+                article_url = url_match.group(0).rstrip('.,;:')
+            else:
+                hl_url = _get_hyperlink_url(para, doc, _qn)
+                if hl_url:
+                    article_url = hl_url
+            continue
+
+        # Section headings switch state
+        if re.match(r'^Discussion\s+Questions?\s*:?\s*$', text, re.I):
+            state = 'discussion'
+            continue
+        if re.match(r'^Library\s+Corner\s*:?\s*$', text, re.I):
+            state = 'library'
+            continue
+        if re.match(r'^Win\s+of\s+the\s+(Week|Month)\s*:?\s*$', text, re.I):
+            state = 'win'
+            continue
+
+        if state == 'intro':
+            html_line = _para_to_inline_html(para, _bold_ids, _italic_ids)
+            intro_lines.append(html_line if html_line else text)
+            continue
+
+        if state == 'discussion':
+            q = re.sub(r'^\d+\.\s*', '', text).strip()
+            if q:
+                discussion_questions.append(q)
+            continue
+
+        if state == 'library':
+            url_match = _pd_url_re.search(text)
+            url = ''
+            if url_match:
+                url = url_match.group(0).rstrip('.,;:')
+            else:
+                hl_url = _get_hyperlink_url(para, doc, _qn)
+                if hl_url:
+                    url = hl_url
+            if url:
+                library_corner_urls.append(url)
+            continue
+
+        if state == 'win':
+            if re.match(r'^[—–\-]\s*', text):
+                win_attribution = re.sub(r'^[—–\-]\s*', '', text).strip()
+            elif not win_text:
+                # Strip curly or straight surrounding quotes
+                win_text = text.strip('“”"‘’\'')
+            continue
+
+    return {
+        'intro_text': '\n\n'.join(intro_lines),
+        'article_url': article_url,
+        'discussion_questions': discussion_questions,
+        'library_corner_urls': library_corner_urls[:2],
+        'win_text': win_text,
+        'win_attribution': win_attribution,
+    }
+
+
 def _get_hyperlink_url(para, doc, qn) -> str:
     """Return the URL of the first hyperlink in a paragraph, or ''."""
     for hl in para._element.findall('.//' + qn('w:hyperlink')):
@@ -722,6 +841,92 @@ def _get_hyperlink_url(para, doc, qn) -> str:
             if target and target.startswith('http'):
                 return target
     return ''
+
+
+_W_NS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
+
+
+def _bold_italic_style_ids(doc):
+    """Return (bold_ids, italic_ids) — style IDs whose font is bold/italic.
+
+    Google Docs DOCX exports often apply bold via a character style rather
+    than direct <w:b/> formatting, so run.bold is None even when the text
+    looks bold. Resolving via the styles part covers that case.
+    """
+    bold_ids, italic_ids = set(), set()
+    try:
+        for style in doc.styles:
+            font = getattr(style, 'font', None)
+            if font is None:
+                continue
+            try:
+                if font.bold:
+                    bold_ids.add(style.style_id)
+                if font.italic:
+                    italic_ids.add(style.style_id)
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return bold_ids, italic_ids
+
+
+def _run_format(run, bold_ids, italic_ids):
+    """Resolve a run's effective bold/italic, honoring character styles."""
+    b = bool(run.bold)
+    i = bool(run.italic)
+    if b and i:
+        return b, i
+    rstyle = run._element.find(f'.//{{{_W_NS}}}rPr/{{{_W_NS}}}rStyle')
+    if rstyle is not None:
+        sid = rstyle.get(f'{{{_W_NS}}}val')
+        if sid:
+            if not b and sid in bold_ids:
+                b = True
+            if not i and sid in italic_ids:
+                i = True
+    return b, i
+
+
+def _para_to_inline_html(para, bold_ids=None, italic_ids=None) -> str:
+    """Convert a python-docx paragraph to inline HTML, preserving bold/italic.
+
+    Adjacent runs sharing the same formatting are merged into a single tag.
+    Text is HTML-escaped. Returns '' for empty paragraphs.
+
+    bold_ids/italic_ids: style ID sets from _bold_italic_style_ids(doc),
+    used to resolve formatting applied via character styles.
+    """
+    import html as _html
+    bold_ids = bold_ids or set()
+    italic_ids = italic_ids or set()
+    parts = []
+    cur_text = ''
+    cur_bold = False
+    cur_italic = False
+
+    def _flush():
+        if not cur_text:
+            return
+        s = _html.escape(cur_text)
+        if cur_bold:
+            s = f'<strong>{s}</strong>'
+        if cur_italic:
+            s = f'<em>{s}</em>'
+        parts.append(s)
+
+    for run in para.runs:
+        if not run.text:
+            continue
+        b, i = _run_format(run, bold_ids, italic_ids)
+        if b == cur_bold and i == cur_italic:
+            cur_text += run.text
+        else:
+            _flush()
+            cur_text = run.text
+            cur_bold, cur_italic = b, i
+    _flush()
+    return ''.join(parts).strip()
 
 
 def _is_bold_para(para) -> bool:
