@@ -724,7 +724,7 @@ def parse_toddler_extended_docx(file_path: str) -> dict:
       <question 1>
       <question 2>
       …
-      LIBRARY CORNER                              (heading)
+      READ MORE                                   (heading)
       <url 1>
       <url 2>
       WIN OF THE WEEK                             (heading)
@@ -782,7 +782,7 @@ def parse_toddler_extended_docx(file_path: str) -> dict:
         if re.match(r'^Discussion\s+Questions?\s*:?\s*$', text, re.I):
             state = 'discussion'
             continue
-        if re.match(r'^Library\s+Corner\s*:?\s*$', text, re.I):
+        if re.match(r'^Read\s+more\s*:?\s*$', text, re.I):
             state = 'library'
             continue
         if re.match(r'^Win\s+of\s+the\s+(Week|Month)\s*:?\s*$', text, re.I):
