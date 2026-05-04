@@ -547,9 +547,9 @@ _LATEST_TEASER_WELCOME_BUBBLE_HTML = (
     'you need for where you are right now. So you can know more, and panic '
     'less.</p>'
     '<p style="margin: 0;">Curious? '
-    '<a href="https://parentdata.org/register/plus/?coupon=monthly3" '
-    'style="color: #000000; text-decoration: underline;">Try it for a month '
-    'for just $9</a>.</p>'
+    '<a href="https://parentdata.org/register/plus-yearly/" '
+    'style="color: #000000; text-decoration: underline;">Try it for less '
+    'than $3/week</a>.</p>'
     '</div>'
     '</td>'
     '</tr></tbody>'
@@ -2016,9 +2016,9 @@ _FREE_DIGEST_INTRO_HTML = (
     f'<p style="{_FREE_DIGEST_INTRO_STYLE} margin: 0 0 16px;">'
     'As a free user, you get limited ParentData reads each month\u2014for '
     'unlimited access, '
-    '<a href="https://parentdata.org/register/plus/?coupon=monthly3" '
+    '<a href="https://parentdata.org/register/plus-yearly/" '
     'style="color: #054F8B; text-decoration: underline;">'
-    'subscribe for less than $3 a week</a>.</p>'
+    'subscribe for less than $3/week</a>.</p>'
 )
 
 
@@ -2477,18 +2477,18 @@ def _update_marketing_pricing(soup, fields):
         p = old_price_td.find('p')
         if p:
             p.clear()
-            p.append(NavigableString(fields.get('old_price', '$120')))
+            p.append(NavigableString(fields.get('old_price', '$12/mo')))
 
     pricing_td = soup.find('td', class_='pricing-new')
     if pricing_td:
         p = pricing_td.find('p')
         if p:
             p.clear()
-            p.append(NavigableString(fields.get('discount_price', '$84/year')))
+            p.append(NavigableString(fields.get('discount_price', '$10/month')))
 
     upgrade_link = soup.find('a', string=re.compile(r'UPGRADE\s+NOW', re.I))
     if upgrade_link:
-        upgrade_link['href'] = fields.get('discount_url', 'https://parentdata.org/register/plus-yearly/?coupon=allaccess30')
+        upgrade_link['href'] = fields.get('discount_url', 'https://parentdata.org/register/plus-yearly/')
 
 
 def _replace_marketing_body(soup, fields):
