@@ -275,16 +275,17 @@ def reformat_wp_content(content_html: str, template_type: str = 'standard') -> d
         welcome_html: str          — always ''
     """
     content_html = _strip_wp_bloat(content_html)
-    bottom_line_instruction = ''
     if template_type == 'fertility':
-        bottom_line_instruction = """
-- "bottom_line_html": If a "The bottom line" section exists in the content, extract it as a single <ul> element with this style:
+        bottom_line_instruction = """<BOTTOM_LINE_HTML>
+If a "The bottom line" section exists in the content, output it here as a single <ul>
+element with this style:
   style="margin: 0; font-family: 'DM Sans', Arial, Helvetica, sans-serif; font-weight: normal; font-size: 16px; line-height: 26px; color: #000000; padding-left: 16px;"
-  Remove the entire "The bottom line" section (heading + list) from article_body_html.
-  If no such section exists, return "".
-"""
+Then REMOVE the entire "The bottom line" section (heading + list) from ARTICLE_BODY_HTML above.
+If no such section exists, leave this section empty.
+</BOTTOM_LINE_HTML>"""
     else:
-        bottom_line_instruction = '- "bottom_line_html": Always return an empty string "".'
+        bottom_line_instruction = """<BOTTOM_LINE_HTML>
+</BOTTOM_LINE_HTML>"""
 
     heading_instruction = (
         'Use <h2> (NOT <h1>) for all section headings.'
@@ -307,11 +308,16 @@ to clean, email-safe HTML with inline styles.
 {style_guide}
 
 ## YOUR TASK:
-Convert the WordPress HTML to email-ready HTML. Return a single JSON object with EXACTLY these keys:
+Convert the WordPress HTML to email-ready HTML. Return the fields below using the EXACT
+XML-style delimiters shown. Do NOT wrap anything in JSON or markdown code fences.
 
-- "subtitle_lines": Array of 1–2 short plain-text strings summarizing the article's main topic or thesis. These appear as the subtitle beneath the title in the email. No HTML.
+<SUBTITLE_LINES>
+1-2 short plain-text strings (one per line) summarizing the article's main topic or thesis.
+These appear as the subtitle beneath the title in the email. No HTML.
+</SUBTITLE_LINES>
 
-- "article_body_html": The complete article body as HTML with inline styles from the Style Guide. Rules:
+<ARTICLE_BODY_HTML>
+The complete article body as HTML with inline styles from the Style Guide. Rules:
   - Strip all WordPress block classes (wp-block-*, has-*, etc.) — use only inline styles.
   - {heading_instruction}
   - Use <p> with the regular paragraph inline style for body text.
@@ -322,20 +328,27 @@ Convert the WordPress HTML to email-ready HTML. Return a single JSON object with
   - Do NOT include any standalone hero or featured image at the very top of the content — it is placed in the template separately.
   - Preserve ALL other images that appear within the article body (charts, diagrams, figures, illustrative images). Apply the inline image style from the Style Guide to each one.
   - Do NOT include any image captions, photo credits, or source attribution text (e.g. "Getty", "iStock", "Shutterstock", "Photo by…"). Remove them completely.
+</ARTICLE_BODY_HTML>
 
 {bottom_line_instruction}
 
-- "welcome_html": Always return an empty string "" — WordPress-sourced articles skip the Emily intro section.
+Return ONLY the delimited sections above, in order. No preamble, no explanation, no code fences."""
 
-IMPORTANT:
-- Return ONLY the raw JSON object. No markdown code fences, no explanation, no extra text.
-- All HTML in the JSON values must be valid and properly escaped as a JSON string."""
+    text = _call_claude_text(prompt, max_tokens=16000)
 
-    result = _call_claude(prompt, max_tokens=16000)
-    result.setdefault('bottom_line_html', '')
-    result.setdefault('welcome_html', '')
-    result.setdefault('subtitle_lines', [])
-    return result
+    def _extract(tag: str) -> str:
+        m = re.search(rf'<{tag}>(.*?)</{tag}>', text, re.DOTALL)
+        return m.group(1).strip() if m else ''
+
+    subtitle_raw = _extract('SUBTITLE_LINES')
+    subtitle_lines = [ln.strip() for ln in subtitle_raw.splitlines() if ln.strip()]
+
+    return {
+        'subtitle_lines':    subtitle_lines,
+        'article_body_html': _extract('ARTICLE_BODY_HTML'),
+        'bottom_line_html':  _extract('BOTTOM_LINE_HTML'),
+        'welcome_html':      '',
+    }
 
 
 def extract_qa_content(content_html: str) -> dict:
@@ -521,6 +534,37 @@ Return ONLY the JSON array. No markdown fences, no explanation."""
     except (json.JSONDecodeError, ValueError):
         pass
     return []
+
+
+def _call_claude_text(prompt: str, max_tokens: int = 8000) -> str:
+    """Send a prompt to Claude and return the raw text response.
+
+    If truncated (stop_reason == 'max_tokens'), retry once with a continuation
+    prompt and concatenate the result.
+    """
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=max_tokens,
+        messages=[{'role': 'user', 'content': prompt}],
+    )
+    text = response.content[0].text
+
+    if response.stop_reason == 'max_tokens':
+        print(f'[claude_client] Response truncated at {max_tokens} tokens — requesting continuation...')
+        continuation = client.messages.create(
+            model=MODEL,
+            max_tokens=max_tokens,
+            messages=[
+                {'role': 'user', 'content': prompt},
+                {'role': 'assistant', 'content': text},
+                {'role': 'user', 'content': 'Your response was cut off. Continue EXACTLY from where you stopped — output only the remaining text, no preamble. Start with the very next character after your last output.'},
+            ],
+        )
+        text = text + continuation.content[0].text
+        if continuation.stop_reason == 'max_tokens':
+            print('[claude_client] Warning: continuation also truncated — output may still be incomplete')
+
+    return text.strip()
 
 
 def _call_claude(prompt: str, max_tokens: int = 8000) -> dict:
